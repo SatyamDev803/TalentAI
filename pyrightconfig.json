@@ -1,0 +1,14 @@
+{
+  "include": ["backend"],
+  "exclude": ["**/node_modules", "**/__pycache__", ".venv"],
+  "pythonVersion": "3.13",
+  "pythonPath": "./.venv/bin/python",
+  "extraPaths": [
+    "${workspaceFolder}/backend/shared",
+    "${workspaceFolder}/backend/services/auth_service"
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "information",
+  "reportPrivateUsage": "warning",
+  "reportOptionalMemberAccess": "warning"
+}
