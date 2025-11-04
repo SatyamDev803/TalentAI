@@ -1,0 +1,321 @@
+################################################################################
+# PYTHON - Virtual Environments & Package Managers
+################################################################################
+venv/
+ENV/
+env/
+.venv
+.env
+.env.*
+!.env.example
+!.env.test
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Poetry (keep poetry.lock in git for reproducibility)
+# poetry.lock  # Uncomment if you want to ignore
+pip-log.txt
+pip-delete-this-directory.txt
+
+################################################################################
+# PYTHON - Runtime & Cache
+################################################################################
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# Python egg/setuptools
+*.egg
+*.egg-info/
+
+################################################################################
+# IDEs & Editors
+################################################################################
+.vscode/
+.vscode/launch.json
+.vscode/settings.json
+.vscode/extensions.json
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.pydevproject
+.settings/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.~lock.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+################################################################################
+# Testing & Coverage
+################################################################################
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+nosetests.xml
+coverage/
+.nox/
+
+# Test artifacts
+.testmondata
+test_results/
+
+################################################################################
+# Debugging & Type Checking
+################################################################################
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+.pytype/
+
+################################################################################
+# Database Files
+################################################################################
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.postgres.db
+
+# Alembic migrations (if generated locally)
+# backend/services/*/alembic/versions/
+
+################################################################################
+# Logs & Temporary Files
+################################################################################
+*.log
+*.log.*
+logs/
+log/
+tmp/
+temp/
+tmp_*
+*.tmp
+*.temp
+*.bak
+*.backup
+
+################################################################################
+# Backend Specific
+################################################################################
+
+# Uploads directory (for Phase 4 - Resume Parser)
+backend/services/*/uploads/
+backend/uploads/
+backend/services/resume_parser_service/uploads/
+backend/services/resume_parser_service/temp/
+
+# Redis persistence
+dump.rdb
+redis.dump
+*.rdb
+
+# Elasticsearch data
+backend/services/*/data/
+data/elasticsearch/
+.elasticsearch/
+
+# Local backend configuration
+backend/local_settings.py
+backend/local_config.py
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# NLP/ML Models (for Phase 4)
+backend/shared/ml_core/models/
+en_core_web_sm/
+nlp_models/
+
+################################################################################
+# Frontend Specific
+################################################################################
+
+# Dependencies
+frontend/node_modules/
+frontend/yarn.lock
+frontend/.pnp
+frontend/.pnp.js
+
+# Testing
+frontend/coverage/
+
+# Production
+frontend/build/
+frontend/dist/
+frontend/.next/
+
+# Misc
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log
+frontend/yarn-error.log
+frontend/.eslintcache
+frontend/.stylelintcache
+
+################################################################################
+# Security & Secrets
+################################################################################
+*.pem
+*.key
+*.crt
+*.pub
+*.private
+secrets/
+.secrets/
+.vault/
+auth_keys/
+private_keys/
+credentials.json
+service-account.json
+aws_credentials
+.aws/
+
+################################################################################
+# Docker
+################################################################################
+docker-compose.override.yml
+.dockerignore
+
+################################################################################
+# IDE Workspace Files
+################################################################################
+*.code-workspace
+.workspace
+
+# VS Code workspace settings
+.vscode/
+settings.json
+
+# Pycharm
+.idea/
+*.iml
+
+################################################################################
+# OS Generated Files
+################################################################################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.directory
+.vscode/
+.idea/
+
+################################################################################
+# Project Specific - TalentAI
+################################################################################
+
+# Postman collections (local overrides)
+Postman/**/auth.json
+Postman/**/env.json
+Postman/
+
+# Documentation (auto-generated)
+docs/generated/
+docs/api/
+docs/_build/
+docs/site/
+docs/
+
+# Build artifacts
+build/
+dist/
+*.whl
+*.zip
+
+# Cache directories
+.cache/
+cache/
+
+# Temporary setup/test files
+test_setup.py
+test_config.py
+local_test.py
+
+################################################################################
+# Version Control
+################################################################################
+.git_keep
+.keep
+.gitkeep
+.env.local
+.env.*.local
+
+################################################################################
+# CI/CD
+################################################################################
+.github/workflows/test_results/
+.gitlab-ci/artifacts/
+
+################################################################################
+# Misc
+################################################################################
+.venv
+venv
+ENV
+env
+.~lock.*
+*.orig
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Keep README files
+!README.md
+!docs/README.md
