@@ -319,3 +319,13 @@ env
 # Keep README files
 !README.md
 !docs/README.md
+
+
+
+# Future phases (not implemented yet)
+backend/services/ai_interview_service/
+backend/services/analytics_service/
+backend/services/matching_engine_service/
+backend/services/notification_service/
+backend/services/workflow_service/
+backend/shared/ml_core/
