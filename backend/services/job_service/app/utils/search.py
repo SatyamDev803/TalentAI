@@ -12,10 +12,8 @@ class SearchManager:
         self.es = None
         self.index_name = "jobs"
         self._initialized = False
-        # Don't connect at init time - do it lazily
 
     def _ensure_connection(self):
-        """Lazy connection - only connect when needed"""
         if self._initialized:
             return
 
@@ -30,7 +28,6 @@ class SearchManager:
             self._initialized = True
 
     def _create_index_if_not_exists(self):
-        """Create index with mappings if not exists"""
         if not self.es:
             return
 
@@ -65,7 +62,6 @@ class SearchManager:
             logger.warning(f"Failed to create ES index: {e}")
 
     async def index_job(self, job: Dict[str, Any]):
-        """Index a job in Elasticsearch"""
         self._ensure_connection()
         if not self.es:
             logger.debug("Elasticsearch not available, skipping indexing")
@@ -104,7 +100,6 @@ class SearchManager:
         page: int = 1,
         page_size: int = 20,
     ) -> Dict[str, Any]:
-        """Search jobs with filters"""
         self._ensure_connection()
         if not self.es:
             logger.debug("Elasticsearch not available, returning empty results")
@@ -168,7 +163,6 @@ class SearchManager:
             return {"total": 0, "jobs": []}
 
     async def delete_job(self, job_id: str):
-        """Delete job from Elasticsearch"""
         self._ensure_connection()
         if not self.es:
             return
@@ -180,5 +174,4 @@ class SearchManager:
             logger.warning(f"Elasticsearch delete error: {e}")
 
 
-# Create singleton instance - this won't fail now
 search_manager = SearchManager()

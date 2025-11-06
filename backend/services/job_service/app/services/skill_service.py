@@ -15,7 +15,6 @@ class SkillService:
         self.db = db
 
     async def create_skill(self, skill_data: SkillCreate) -> Skill:
-        """Create a new skill"""
         try:
             # Check if skill already exists
             result = await self.db.execute(
@@ -40,7 +39,6 @@ class SkillService:
             raise
 
     async def get_skill_by_id(self, skill_id: str) -> Optional[Skill]:
-        """Get skill by ID"""
         try:
             result = await self.db.execute(
                 select(Skill).where(Skill.id == uuid.UUID(skill_id))
@@ -58,7 +56,6 @@ class SkillService:
     async def list_skills(
         self, page: int = 1, page_size: int = 20
     ) -> tuple[list[Skill], int]:
-        """List all skills with pagination"""
         try:
             count_result = await self.db.execute(select(func.count(Skill.id)))
             total = count_result.scalar()
@@ -74,7 +71,6 @@ class SkillService:
             raise
 
     async def delete_skill(self, skill_id: str) -> bool:
-        """Delete a skill"""
         try:
             skill = await self.get_skill_by_id(skill_id)
 

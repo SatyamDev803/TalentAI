@@ -1,12 +1,9 @@
-"""User management API endpoints."""
-
 from typing import List
 
+from common.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_active_user, require_role
-from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.user import UserRead, UserUpdate
 from app.services.auth_service import AuthService, get_auth_service
@@ -18,18 +15,8 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def get_current_user_profile(
     current_user: User = Depends(get_current_active_user),
 ) -> UserRead:
-    """Get current user's profile.
 
-    **Authorization:**
-    - Bearer <access_token> in Authorization header
-
-    **Response:**
-    - User profile with all details
-
-    **Errors:**
-    - 401: Invalid or expired token
-    - 403: User account inactive
-    """
+    logger.info(f"Get current user: {current_user.id}")
     return current_user
 
 
@@ -39,29 +26,17 @@ async def update_current_user_profile(
     current_user: User = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> UserRead:
-    """Update current user's profile.
 
-    **Authorization:**
-    - Bearer <access_token> in Authorization header
-
-    **Request Body:**
-    - full_name: (optional) New full name
-    - role: (optional) New role
-
-    **Response:**
-    - Updated user profile
-
-    **Errors:**
-    - 401: Invalid token
-    - 403: User inactive
-    """
     try:
+        logger.info(f"Updating user profile: {current_user.id}")
         updated_user = await auth_service.update_user_profile(
             current_user,
             update_data,
         )
+        logger.info(f"User updated: {current_user.id}")
         return updated_user
     except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -74,22 +49,9 @@ async def get_user_by_id(
     current_user: User = Depends(require_role(UserRole.ADMIN, UserRole.RECRUITER)),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> UserRead:
-    """Get user by ID (Admin/Recruiter only).
 
-    **Authorization:**
-    - Bearer <access_token> with ADMIN or RECRUITER role
+    logger.info(f"Get user by ID: {user_id}")
 
-    **Path Parameters:**
-    - user_id: User ID to fetch
-
-    **Response:**
-    - User profile
-
-    **Errors:**
-    - 401: Invalid token
-    - 403: Insufficient permissions
-    - 404: User not found
-    """
     user = await auth_service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -99,6 +61,35 @@ async def get_user_by_id(
     return user
 
 
+@router.put("/{user_id}", response_model=UserRead)
+async def update_user_by_id(
+    user_id: str,
+    update_data: UserUpdate,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> UserRead:
+
+    logger.info(f"Admin updating user: {user_id}")
+
+    user = await auth_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    try:
+        updated_user = await auth_service.update_user_profile(user, update_data)
+        logger.info(f"User updated by admin: {user_id}")
+        return updated_user
+    except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
 @router.get("", response_model=List[UserRead])
 async def list_all_users(
     skip: int = 0,
@@ -106,24 +97,11 @@ async def list_all_users(
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> List[UserRead]:
-    """List all users (Admin only).
 
-    **Authorization:**
-    - Bearer <access_token> with ADMIN role
-
-    **Query Parameters:**
-    - skip: Number of users to skip (default: 0)
-    - limit: Maximum users to return (default: 100, max: 1000)
-
-    **Response:**
-    - List of users
-
-    **Errors:**
-    - 401: Invalid token
-    - 403: Not an admin
-    """
     if limit > 1000:
         limit = 1000
+
+    logger.info(f"Listing users: skip={skip}, limit={limit}")
 
     users = await auth_service.list_users(skip=skip, limit=limit)
     return users
@@ -135,26 +113,9 @@ async def deactivate_user(
     current_user: User = Depends(require_role(UserRole.ADMIN)),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> None:
-    """Deactivate a user (Admin only).
 
-    **Authorization:**
-    - Bearer <access_token> with ADMIN role
+    logger.info(f"Deactivating user: {user_id}")
 
-    **Path Parameters:**
-    - user_id: User ID to deactivate
-
-    **Effects:**
-    - User account marked inactive
-    - All tokens revoked
-
-    **Response:**
-    - 204 No Content on success
-
-    **Errors:**
-    - 401: Invalid token
-    - 403: Not an admin
-    - 404: User not found
-    """
     user = await auth_service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(
@@ -164,7 +125,9 @@ async def deactivate_user(
 
     try:
         await auth_service.deactivate_user(user)
+        logger.info(f"User deactivated: {user_id}")
     except Exception as e:
+        logger.error(f"Error deactivating user: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),

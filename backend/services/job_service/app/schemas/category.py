@@ -1,29 +1,22 @@
-"""Category schemas."""
-
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CategoryCreate(BaseModel):
-    """Create category request."""
-
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
 
 
 class CategoryRead(BaseModel):
-    """Category response."""
-
     id: str = Field(...)
     name: str
     description: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @field_validator("id", mode="before")
     @classmethod
@@ -34,14 +27,10 @@ class CategoryRead(BaseModel):
 
 
 class CategoryListResponse(BaseModel):
-    """List categories response."""
-
     total: int
     categories: list[CategoryRead]
 
 
 class CategoryUpdate(BaseModel):
-    """Update category request."""
-
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)

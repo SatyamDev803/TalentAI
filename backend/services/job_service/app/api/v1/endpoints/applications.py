@@ -1,12 +1,15 @@
 from common.exceptions import ResourceNotFoundError, ValidationError
 from common.logger import logger
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from common.validators import validate_uuid
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from app.core.deps import (get_application_service, get_current_active_user,
-                           require_role)
-from app.schemas.application import (ApplicationCreate,
-                                     ApplicationListResponse, ApplicationRead,
-                                     ApplicationUpdate)
+from app.core.deps import get_application_service, get_current_active_user, require_role
+from app.schemas.application import (
+    ApplicationCreate,
+    ApplicationListResponse,
+    ApplicationRead,
+    ApplicationUpdate,
+)
 from app.services.application_service import ApplicationService
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
@@ -18,19 +21,22 @@ router = APIRouter(prefix="/applications", tags=["Applications"])
     status_code=status.HTTP_201_CREATED,
 )
 async def apply_for_job(
-    job_id: str,
-    application_data: ApplicationCreate,
+    job_id: str = Path(..., description="Job ID"),
+    application_data: ApplicationCreate = None,
     current_user: dict = Depends(require_role("CANDIDATE")),
     app_service: ApplicationService = Depends(get_application_service),
 ) -> ApplicationRead:
-    """Apply for a job (Candidate only)"""
+
     try:
+        validate_uuid(job_id, "Job ID")
         application = await app_service.apply_for_job(
             job_id=job_id,
             candidate_id=current_user.get("id"),
             app_data=application_data,
         )
         return application
+    except HTTPException:
+        raise
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -47,7 +53,7 @@ async def list_my_applications(
     current_user: dict = Depends(require_role("CANDIDATE")),
     app_service: ApplicationService = Depends(get_application_service),
 ) -> ApplicationListResponse:
-    """List my applications (Candidate only)"""
+
     try:
         applications, total = await app_service.get_candidate_applications(
             candidate_id=current_user.get("id"),
@@ -63,20 +69,23 @@ async def list_my_applications(
         )
 
 
-@router.get(
-    "/{application_id}", response_model=ApplicationRead, status_code=status.HTTP_200_OK
-)
+@router.get("/{application_id}", response_model=ApplicationRead)
 async def get_application(
-    application_id: str,
+    application_id: str = Path(..., description="Application ID"),
     current_user: dict = Depends(get_current_active_user),
     app_service: ApplicationService = Depends(get_application_service),
 ) -> ApplicationRead:
-    """Get application details"""
+
     try:
+        validate_uuid(application_id, "Application ID")
         application = await app_service.get_application_by_id(application_id)
         return application
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
+    except ResourceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
     except Exception as e:
         logger.error(f"Error getting application: {str(e)}")
         raise HTTPException(
@@ -85,26 +94,26 @@ async def get_application(
         )
 
 
-@router.put(
-    "/{application_id}", response_model=ApplicationRead, status_code=status.HTTP_200_OK
-)
+@router.patch("/{application_id}", response_model=ApplicationRead)
 async def update_application_status(
-    application_id: str,
-    status_update: ApplicationUpdate,
-    current_user: dict = Depends(require_role("RECRUITER")),
+    application_id: str = Path(..., description="Application ID"),
+    status_update: ApplicationUpdate = None,
+    current_user: dict = Depends(get_current_active_user),
     app_service: ApplicationService = Depends(get_application_service),
 ) -> ApplicationRead:
-    """Update application status (Recruiter only)"""
+
     try:
+        validate_uuid(application_id, "Application ID")
         application = await app_service.update_application_status(
-            application_id=application_id,
-            status_data=status_update,
+            application_id, status_update
         )
         return application
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ValidationError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
+    except ResourceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
     except Exception as e:
         logger.error(f"Error updating application: {str(e)}")
         raise HTTPException(
@@ -113,22 +122,31 @@ async def update_application_status(
         )
 
 
-@router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{application_id}/withdraw", status_code=status.HTTP_200_OK)
 async def withdraw_application(
-    application_id: str,
+    application_id: str = Path(..., description="Application ID"),
     current_user: dict = Depends(require_role("CANDIDATE")),
     app_service: ApplicationService = Depends(get_application_service),
-) -> None:
-    """Withdraw application (Candidate only)"""
+) -> ApplicationRead:
+
     try:
-        await app_service.withdraw_application(application_id)
-    except ResourceNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        validate_uuid(application_id, "Application ID")
+        application = await app_service.withdraw_application(application_id)
+        logger.info(f"Application withdrawn: {application_id}")
+        return application
+
+    except HTTPException:
+        raise
+
+    except ResourceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Application not found"
+        )
     except Exception as e:
         logger.error(f"Error withdrawing application: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to withdraw",
+            detail="Failed to withdraw application",
         )
 
 
@@ -138,20 +156,23 @@ async def withdraw_application(
     status_code=status.HTTP_200_OK,
 )
 async def get_job_applications(
-    job_id: str,
+    job_id: str = Path(..., description="Job ID"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(require_role("RECRUITER")),
     app_service: ApplicationService = Depends(get_application_service),
 ) -> ApplicationListResponse:
-    """Get all applications for a job (Recruiter only)"""
+
     try:
+        validate_uuid(job_id, "Job ID")
         applications, total = await app_service.get_job_applications(
             job_id=job_id,
             page=page,
             page_size=page_size,
         )
         return ApplicationListResponse(total=total, applications=applications)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error listing job applications: {str(e)}")
         raise HTTPException(

@@ -36,16 +36,5 @@ class UserRead(UserBase):
 
 
 class LoginRequest(BaseModel):
-    """User login request."""
-
-    email: EmailStr
-    password: str = Field(min_length=1)
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "email": "user@example.com",
-                "password": "SecurePassword123",
-            }
-        }
-    )
+    email: EmailStr = Field(..., example="user@example.com")
+    password: str = Field(..., min_length=1, example="SecurePassword123")
