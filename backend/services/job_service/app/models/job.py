@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -36,9 +36,8 @@ class Job(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
-    company_id = Column(UUID(as_uuid=True), nullable=False)  # ← REMOVE ForeignKey
-    created_by_id = Column(UUID(as_uuid=True), nullable=False)  # ← REMOVE ForeignKey
-
+    company_id = Column(UUID(as_uuid=True), nullable=False)
+    created_by_id = Column(UUID(as_uuid=True), nullable=False)
     salary_min = Column(Integer, nullable=True)
     salary_max = Column(Integer, nullable=True)
     location = Column(String(255), nullable=False)
@@ -46,7 +45,7 @@ class Job(Base):
     experience_level = Column(
         Enum(ExperienceLevel), default=ExperienceLevel.MID, nullable=False
     )
-    category_id = Column(UUID(as_uuid=True), nullable=True)  # ← REMOVE ForeignKey
+    category_id = Column(UUID(as_uuid=True), nullable=True)
 
     status = Column(
         Enum(JobStatus), default=JobStatus.DRAFT, nullable=False, index=True
@@ -65,8 +64,9 @@ class Job(Base):
         nullable=False,
     )
     deleted_at = Column(DateTime(timezone=True), nullable=True)
+    embedding = Column(JSON, nullable=True, comment="384-dim embedding vector")
+    embedding_updated_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Don't need relationships for microservices
     applications = relationship(
         "Application", back_populates="job", cascade="all, delete-orphan"
     )

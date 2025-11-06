@@ -15,7 +15,6 @@ class CategoryService:
         self.db = db
 
     async def create_category(self, category_data: CategoryCreate) -> Category:
-        """Create a new category"""
         try:
             # Check if category already exists
             result = await self.db.execute(
@@ -40,7 +39,6 @@ class CategoryService:
             raise
 
     async def get_category_by_id(self, category_id: str) -> Optional[Category]:
-        """Get category by ID"""
         try:
             result = await self.db.execute(
                 select(Category).where(Category.id == uuid.UUID(category_id))
@@ -58,7 +56,6 @@ class CategoryService:
     async def list_categories(
         self, page: int = 1, page_size: int = 20
     ) -> tuple[list[Category], int]:
-        """List all categories with pagination"""
         try:
             count_result = await self.db.execute(select(func.count(Category.id)))
             total = count_result.scalar()

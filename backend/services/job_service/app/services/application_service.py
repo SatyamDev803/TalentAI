@@ -19,7 +19,6 @@ class ApplicationService:
     async def apply_for_job(
         self, job_id: str, candidate_id: str, app_data: ApplicationCreate
     ) -> Application:
-        """Submit job application"""
         try:
             # Check if job exists
             result = await self.db.execute(
@@ -64,7 +63,6 @@ class ApplicationService:
             raise
 
     async def get_application_by_id(self, application_id: str) -> Optional[Application]:
-        """Get application by ID"""
         try:
             result = await self.db.execute(
                 select(Application).where(Application.id == uuid.UUID(application_id))
@@ -82,7 +80,6 @@ class ApplicationService:
     async def get_candidate_applications(
         self, candidate_id: str, page: int = 1, page_size: int = 10
     ) -> tuple[list[Application], int]:
-        """Get all applications for a candidate"""
         try:
             # Count total (excluding withdrawn)
             count_result = await self.db.execute(
@@ -117,9 +114,7 @@ class ApplicationService:
     async def get_job_applications(
         self, job_id: str, page: int = 1, page_size: int = 10
     ) -> tuple[list[Application], int]:
-        """Get all applications for a job"""
         try:
-            # Count total (excluding withdrawn)
             count_result = await self.db.execute(
                 select(func.count(Application.id)).where(
                     Application.job_id == uuid.UUID(job_id),
@@ -128,7 +123,6 @@ class ApplicationService:
             )
             total = count_result.scalar() or 0
 
-            # Get paginated results
             offset = (page - 1) * page_size
             query = (
                 select(Application)
@@ -152,7 +146,6 @@ class ApplicationService:
     async def update_application_status(
         self, application_id: str, status_data: ApplicationUpdate
     ) -> Application:
-        """Update application status"""
         try:
             application = await self.get_application_by_id(application_id)
 
@@ -177,7 +170,6 @@ class ApplicationService:
             raise
 
     async def withdraw_application(self, application_id: str) -> Application:
-        """Withdraw application"""
         try:
             application = await self.get_application_by_id(application_id)
             application.status = ApplicationStatus.WITHDRAWN
