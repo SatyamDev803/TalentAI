@@ -1,5 +1,5 @@
-import logging
 import json
+import logging
 from datetime import datetime
 
 
@@ -23,19 +23,16 @@ def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
 
     if not logger.handlers:
-        # Console handler
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(JSONFormatter())
         logger.addHandler(console_handler)
 
-        # Set level
         logger.setLevel(logging.DEBUG)
 
     return logger
 
 
-# Global logger instance
 logger = get_logger(__name__)
 
 

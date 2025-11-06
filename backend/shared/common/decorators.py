@@ -1,18 +1,12 @@
 import asyncio
-import time
 import functools
+import time
 from typing import Callable
+
 from common.logger import logger
 
 
 def log_execution_time(func: Callable) -> Callable:
-    """Decorator to log function execution time
-
-    Usage:
-        @log_execution_time
-        async def my_function():
-            pass
-    """
     if asyncio.iscoroutinefunction(func):
 
         @functools.wraps(func)
@@ -52,14 +46,6 @@ def log_execution_time(func: Callable) -> Callable:
 
 
 def retry(max_attempts: int = 3, backoff: float = 2):
-    """Decorator to retry function on failure.
-
-    Usage:
-        @retry(max_attempts=3, backoff=2)
-        async def unreliable_operation():
-            pass
-    """
-
     def decorator(func: Callable) -> Callable:
         if asyncio.iscoroutinefunction(func):
 

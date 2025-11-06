@@ -53,6 +53,7 @@ elasticsearch = "^9.2.0"
 isort = "^7.0.0"
 flake8 = "^7.3.0"
 mypy = "^1.18.2"
+scikit-learn = "^1.7.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

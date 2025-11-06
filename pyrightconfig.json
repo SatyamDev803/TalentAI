@@ -1,14 +1,39 @@
 {
   "include": ["backend"],
-  "exclude": ["**/node_modules", "**/__pycache__", ".venv"],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    ".venv",
+    "talentai-pro-py3.13",
+    "*.egg-info",
+    ".pytest_cache",
+    ".mypy_cache"
+  ],
   "pythonVersion": "3.13",
-  "pythonPath": "./.venv/bin/python",
+  "pythonPlatform": "Darwin",
+  "typeCheckingMode": "basic",
   "extraPaths": [
     "${workspaceFolder}/backend/shared",
-    "${workspaceFolder}/backend/services/auth_service"
+    "${workspaceFolder}/backend/services/auth_service",
+    "${workspaceFolder}/backend/services/job_service",
+    "${workspaceFolder}/backend/services/resume_parser"
   ],
-  "typeCheckingMode": "basic",
-  "reportMissingImports": "information",
+  "executionEnvironments": [
+    {
+      "root": "backend/services/auth_service",
+      "pythonPath": "../../../.venv/bin/python",
+      "extraPaths": ["../../shared"]
+    },
+    {
+      "root": "backend/services/job_service",
+      "pythonPath": "../../../.venv/bin/python",
+      "extraPaths": ["../../shared"]
+    }
+  ],
+  "reportMissingImports": "warning",
   "reportPrivateUsage": "warning",
-  "reportOptionalMemberAccess": "warning"
+  "reportOptionalMemberAccess": "warning",
+  "reportUnusedVariable": "information",
+  "reportUnusedImport": "warning",
+  "reportGeneralTypeIssues": "warning"
 }
