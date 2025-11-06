@@ -1,18 +1,14 @@
-"""Auth service configuration."""
-
 from common.config import BaseConfig
 from pydantic import ConfigDict, Field
 
 
 class AuthConfig(BaseConfig):
-    """Auth service configuration extending base config."""
 
     model_config = ConfigDict(
         env_file=".env",
         case_sensitive=False,
     )
 
-    # JWT Configuration
     jwt_secret: str = Field(
         default="change-me-in-production-use-strong-secret",
         alias="JWT_SECRET",
