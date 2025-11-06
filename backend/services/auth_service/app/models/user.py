@@ -1,11 +1,8 @@
-"""User model for authentication."""
-
-import enum
 import uuid
 from datetime import datetime, timezone
+from enum import Enum as PyEnum
 
-from sqlalchemy import Boolean, Column, DateTime
-from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Boolean, Column, DateTime, Enum
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -13,9 +10,7 @@ from sqlalchemy.orm import relationship
 from app.db.base import Base
 
 
-class UserRole(str, enum.Enum):
-    """User role enumeration."""
-
+class UserRole(str, PyEnum):
     ADMIN = "ADMIN"
     RECRUITER = "RECRUITER"
     HIRING_MANAGER = "HIRING_MANAGER"
@@ -23,15 +18,13 @@ class UserRole(str, enum.Enum):
 
 
 class User(Base):
-    """User model."""
-
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.CANDIDATE)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.CANDIDATE)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     is_verified = Column(Boolean, nullable=False, default=False)

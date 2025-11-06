@@ -1,5 +1,3 @@
-"""Company model."""
-
 import uuid
 from datetime import datetime, timezone
 
@@ -11,8 +9,6 @@ from app.db.base import Base
 
 
 class Company(Base):
-    """Company model."""
-
     __tablename__ = "companies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -20,7 +16,9 @@ class Company(Base):
     industry = Column(String(100), nullable=True)
     size = Column(String(50), nullable=True)
     logo_url = Column(String(500), nullable=True)
-    subscription_tier = Column(String(50), nullable=False, default="FREE")
+    subscription_tier = Column(
+        String(50), nullable=False, default="FREE"
+    )  # We can use Enum for other tiers
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -1,5 +1,3 @@
-"""Security utilities for authentication."""
-
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
@@ -9,7 +7,6 @@ from passlib.context import CryptContext
 
 from app.core.config import AuthConfig
 
-# Password hashing context - using argon2
 pwd_context = CryptContext(
     schemes=["argon2"],
     deprecated="auto",
@@ -19,13 +16,11 @@ settings = AuthConfig()
 
 
 def hash_password(password: str) -> str:
-    """Hash password using argon2."""
     password = password[: settings.password_max_length]
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify plain password against hashed password."""
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -36,7 +31,7 @@ def create_access_token(
     company_id: str = None,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-    """Create JWT access token with role, email, and company_id."""
+
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
 
@@ -44,13 +39,18 @@ def create_access_token(
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
 
+    if hasattr(role, "value"):  # Check if it's an enum
+        role_str = role.value
+    else:
+        role_str = str(role)
+
     to_encode = {
         "sub": subject,
         "exp": int(expire.timestamp()),
         "iat": int(now.timestamp()),
         "jti": jti,
         "type": "access",
-        "role": role,
+        "role": role_str,
         "email": email,
         "company_id": company_id,
     }
@@ -68,7 +68,7 @@ def create_refresh_token(
     subject: str,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-    """Create JWT refresh token."""
+
     if expires_delta is None:
         expires_delta = timedelta(days=settings.refresh_token_expire_days)
 
@@ -94,7 +94,6 @@ def create_refresh_token(
 
 
 def decode_token(token: str) -> Optional[Dict]:
-    """Decode and verify JWT token."""
     try:
         payload = jwt.decode(
             token,
@@ -114,12 +113,22 @@ def create_tokens(
     email: str = None,
     company_id: str = None,
 ) -> Dict[str, str]:
-    """Create both access and refresh tokens."""
+
+    if hasattr(role, "value"):
+        role_value = role.value
+    else:
+        role_value = str(role)
+
+    if company_id:
+        company_id_str = str(company_id)
+    else:
+        company_id_str = None
+
     access_token, access_jti = create_access_token(
         user_id,
-        role=role,
+        role=role_value,
         email=email,
-        company_id=company_id,
+        company_id=company_id_str,
     )
     refresh_token, refresh_jti = create_refresh_token(user_id)
 
