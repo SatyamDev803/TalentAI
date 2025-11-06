@@ -1,5 +1,3 @@
-"""Company model."""
-
 import uuid
 from datetime import datetime, timezone
 
@@ -11,8 +9,6 @@ from app.db.base import Base
 
 
 class Company(Base):
-    """Company model."""
-
     __tablename__ = "companies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

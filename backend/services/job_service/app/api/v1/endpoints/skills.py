@@ -2,8 +2,7 @@ from common.exceptions import ResourceNotFoundError, ValidationError
 from common.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import (get_current_active_user, get_skill_service,
-                           require_role)
+from app.core.deps import get_current_active_user, get_skill_service, require_role
 from app.schemas.skill import SkillCreate, SkillListResponse, SkillRead
 from app.services.skill_service import SkillService
 
@@ -17,7 +16,7 @@ async def list_skills(
     current_user: dict = Depends(get_current_active_user),
     skill_service: SkillService = Depends(get_skill_service),
 ) -> SkillListResponse:
-    """List all skills"""
+
     try:
         skills, total = await skill_service.list_skills(page, page_size)
         return SkillListResponse(
@@ -38,7 +37,7 @@ async def create_skill(
     current_user: dict = Depends(require_role("ADMIN")),
     skill_service: SkillService = Depends(get_skill_service),
 ) -> SkillRead:
-    """Create a new skill (Admin only)"""
+
     try:
         skill = await skill_service.create_skill(skill_data)
         return skill
@@ -58,7 +57,7 @@ async def delete_skill(
     current_user: dict = Depends(require_role("ADMIN")),
     skill_service: SkillService = Depends(get_skill_service),
 ) -> None:
-    """Delete a skill (Admin only)"""
+
     try:
         await skill_service.delete_skill(skill_id)
     except ResourceNotFoundError as e:

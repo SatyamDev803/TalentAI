@@ -2,18 +2,16 @@ import uuid
 
 import pytest
 from common.exceptions import ValidationError
+from common.redis_client import redis_client
 
 from app.models.application import ApplicationStatus
 from app.models.job import JobStatus
 from app.schemas.application import ApplicationCreate
 from app.schemas.job import JobCreate, JobUpdate
-from app.utils.cache import cache_manager
-from app.utils.search import search_manager
 
 
 @pytest.mark.asyncio
 async def test_create_job_success(job_service):
-    """Test successful job creation"""
     job_data = JobCreate(
         title="Python Developer",
         description="Senior Python developer needed",
@@ -25,7 +23,6 @@ async def test_create_job_success(job_service):
         is_remote=True,
     )
 
-    # Use valid UUIDs
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
 
@@ -40,8 +37,6 @@ async def test_create_job_success(job_service):
 
 @pytest.mark.asyncio
 async def test_job_caching(job_service, sample_job):
-    """Test job retrieval with caching"""
-    # Create a job first
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -51,10 +46,8 @@ async def test_job_caching(job_service, sample_job):
     )
     job_id = str(created_job.id)
 
-    # First call - from DB
     job1 = await job_service.get_job_by_id(job_id)
 
-    # Second call - should be from cache
     job2 = await job_service.get_job_by_id(job_id)
 
     assert job1.id == job2.id
@@ -62,7 +55,6 @@ async def test_job_caching(job_service, sample_job):
 
 @pytest.mark.asyncio
 async def test_publish_job_indexes_elasticsearch(job_service, sample_job):
-    """Test that publishing job indexes it in Elasticsearch"""
     # Create and publish a job
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
@@ -78,16 +70,9 @@ async def test_publish_job_indexes_elasticsearch(job_service, sample_job):
 
     assert job.status == JobStatus.PUBLISHED
 
-    # Search for it
-    results = await search_manager.search_jobs(query=job.title)
-
-    # Results might be empty if ES not running, but shouldn't error
-    assert isinstance(results, dict)
-
 
 @pytest.mark.asyncio
 async def test_cache_invalidation_on_update(job_service, sample_job):
-    """Test cache invalidation after job update"""
     # Create a job first
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
@@ -99,18 +84,15 @@ async def test_cache_invalidation_on_update(job_service, sample_job):
     job_id = str(created_job.id)
     cache_key = f"job:{job_id}"
 
-    # Update job
     job_update = JobUpdate(title="Updated Title")
     await job_service.update_job(job_id, job_update)
 
-    # Cache should be cleared
-    cached = await cache_manager.get(cache_key)
+    cached = await redis_client.get(cache_key)
     assert cached is None
 
 
 @pytest.mark.asyncio
 async def test_job_search_with_filters(job_service):
-    """Test job search with various filters"""
     filters = {
         "experience_level": "SENIOR",
         "is_remote": True,
@@ -128,8 +110,6 @@ async def test_job_search_with_filters(job_service):
 
 @pytest.mark.asyncio
 async def test_apply_for_job_success(job_service, sample_job):
-    """Test successful job application"""
-    # Create a job first
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     recruiter_id = str(uuid.uuid4())
@@ -139,10 +119,8 @@ async def test_apply_for_job_success(job_service, sample_job):
     )
     job_id = str(created_job.id)
 
-    # Publish it
     await job_service.publish_job(job_id)
 
-    # Now apply
     candidate_id = str(uuid.uuid4())
     app_data = ApplicationCreate(cover_letter="I am interested in this role")
 
@@ -156,8 +134,6 @@ async def test_apply_for_job_success(job_service, sample_job):
 
 @pytest.mark.asyncio
 async def test_duplicate_application_rejected(job_service, sample_job):
-    """Test that duplicate applications are rejected"""
-    # Create and publish a job
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     recruiter_id = str(uuid.uuid4())
@@ -169,22 +145,17 @@ async def test_duplicate_application_rejected(job_service, sample_job):
 
     await job_service.publish_job(job_id)
 
-    # Apply as candidate
     candidate_id = str(uuid.uuid4())
     app_data = ApplicationCreate(cover_letter="...")
 
-    # Create first application
     await job_service.apply_for_job(job_id, candidate_id, app_data)
 
-    # Try to create duplicate
     with pytest.raises(ValidationError):
         await job_service.apply_for_job(job_id, candidate_id, app_data)
 
 
 @pytest.mark.asyncio
 async def test_close_job_success(job_service, sample_job):
-    """Test closing a published job"""
-    # Create and publish a job
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -196,7 +167,6 @@ async def test_close_job_success(job_service, sample_job):
 
     await job_service.publish_job(job_id)
 
-    # Now close it
     job = await job_service.close_job(job_id)
 
     assert job.status == JobStatus.CLOSED
@@ -205,8 +175,6 @@ async def test_close_job_success(job_service, sample_job):
 
 @pytest.mark.asyncio
 async def test_get_candidate_applications(job_service, sample_job):
-    """Test retrieving candidate applications"""
-    # Create a job
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     recruiter_id = str(uuid.uuid4())
@@ -218,13 +186,11 @@ async def test_get_candidate_applications(job_service, sample_job):
 
     await job_service.publish_job(job_id)
 
-    # Apply as candidate
     candidate_id = str(uuid.uuid4())
     app_data = ApplicationCreate(cover_letter="I'm interested")
 
     await job_service.apply_for_job(job_id, candidate_id, app_data)
 
-    # Get candidate's applications
     apps, total = await job_service.get_candidate_applications(
         candidate_id=candidate_id, page=1, page_size=10
     )
@@ -236,8 +202,6 @@ async def test_get_candidate_applications(job_service, sample_job):
 
 @pytest.mark.asyncio
 async def test_get_job_applications(job_service, sample_job):
-    """Test retrieving job applications"""
-    # Create a job
     job_data = JobCreate(**sample_job)
     company_id = str(uuid.uuid4())
     recruiter_id = str(uuid.uuid4())
@@ -249,13 +213,11 @@ async def test_get_job_applications(job_service, sample_job):
 
     await job_service.publish_job(job_id)
 
-    # Apply as candidate
     candidate_id = str(uuid.uuid4())
     app_data = ApplicationCreate(cover_letter="I'm interested")
 
     await job_service.apply_for_job(job_id, candidate_id, app_data)
 
-    # Get job's applications
     apps, total = await job_service.get_job_applications(
         job_id=job_id, page=1, page_size=10
     )

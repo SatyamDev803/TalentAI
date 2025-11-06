@@ -2,10 +2,8 @@ from common.exceptions import ValidationError
 from common.logger import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.deps import (get_category_service, get_current_active_user,
-                           require_role)
-from app.schemas.category import (CategoryCreate, CategoryListResponse,
-                                  CategoryRead)
+from app.core.deps import get_category_service, get_current_active_user, require_role
+from app.schemas.category import CategoryCreate, CategoryListResponse, CategoryRead
 from app.services.category_service import CategoryService
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
@@ -18,7 +16,7 @@ async def list_categories(
     current_user: dict = Depends(get_current_active_user),
     category_service: CategoryService = Depends(get_category_service),
 ) -> CategoryListResponse:
-    """List all categories"""
+
     try:
         categories, total = await category_service.list_categories(page, page_size)
         return CategoryListResponse(
@@ -39,7 +37,7 @@ async def create_category(
     current_user: dict = Depends(require_role("ADMIN")),
     category_service: CategoryService = Depends(get_category_service),
 ) -> CategoryRead:
-    """Create a new category (Admin only)"""
+
     try:
         category = await category_service.create_category(category_data)
         return category

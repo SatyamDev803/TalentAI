@@ -25,9 +25,7 @@ class Application(Base):
     job_id = Column(
         UUID(as_uuid=True), ForeignKey("jobs.id"), nullable=False, index=True
     )
-    candidate_id = Column(
-        UUID(as_uuid=True), nullable=False, index=True
-    )  # ← REMOVE ForeignKey
+    candidate_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     status = Column(
         Enum(ApplicationStatus),
@@ -55,5 +53,4 @@ class Application(Base):
         nullable=False,
     )
 
-    # Relationships
     job = relationship("Job", back_populates="applications")

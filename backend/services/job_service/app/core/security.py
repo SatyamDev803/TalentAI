@@ -1,5 +1,3 @@
-"""Security utilities for authentication."""
-
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
@@ -9,7 +7,6 @@ from passlib.context import CryptContext
 
 from app.core.config import JobServiceConfig
 
-# Password hashing context - using argon2
 pwd_context = CryptContext(
     schemes=["argon2"],
     deprecated="auto",
@@ -19,13 +16,11 @@ settings = JobServiceConfig()
 
 
 def hash_password(password: str) -> str:
-    """Hash password using argon2."""
     password = password[: settings.password_max_length]
     return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify plain password against hashed password."""
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -33,7 +28,7 @@ def create_access_token(
     subject: str,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-    """Create JWT access token."""
+
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
 
@@ -62,7 +57,6 @@ def create_refresh_token(
     subject: str,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-    """Create JWT refresh token."""
     if expires_delta is None:
         expires_delta = timedelta(days=settings.refresh_token_expire_days)
 
@@ -88,7 +82,6 @@ def create_refresh_token(
 
 
 def decode_token(token: str) -> Optional[Dict]:
-    """Decode and verify JWT token."""
     try:
         payload = jwt.decode(
             token,
@@ -103,7 +96,6 @@ def decode_token(token: str) -> Optional[Dict]:
 
 
 def create_tokens(user_id: str) -> Dict[str, str]:
-    """Create both access and refresh tokens."""
     access_token, access_jti = create_access_token(user_id)
     refresh_token, refresh_jti = create_refresh_token(user_id)
 
