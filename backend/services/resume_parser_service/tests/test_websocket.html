@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Parser - WebSocket Test</title>
+    
+    <!-- Socket.IO Client Library -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .user-id-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #5568d3;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .messages {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .message {
+            padding: 16px 20px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 1px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .message.system {
+            background-color: #f8f9fa;
+            border-left-color: #6c757d;
+        }
+
+        .message.progress {
+            background-color: #e7f3ff;
+            border-left-color: #0066cc;
+        }
+
+        .message.complete {
+            background-color: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .message-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .message-content {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        .progress-bar-container {
+            background: #e0e0e0;
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 Resume Parser - WebSocket Test</h1>
+            <div class="status disconnected" id="status">
+                <span id="status-text">Disconnected</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <input 
+                type="text" 
+                id="userIdInput" 
+                class="user-id-input" 
+                placeholder="Enter your User ID (from JWT token)"
+                value="4bb8a7d6-b47b-4ca7-ba9c-4efc08df4b8b"
+            />
+            <button class="btn btn-primary" onclick="connectWebSocket()">Connect</button>
+            <button class="btn btn-danger" onclick="disconnectWebSocket()">Disconnect</button>
+            <button class="btn btn-success" onclick="clearMessages()">Clear Messages</button>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                </svg>
+                <p>No messages yet. Connect to start receiving updates!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentUserId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Resume Parser WebSocket Test loaded');
+            updateStatus('disconnected', 'Disconnected');
+        });
+
+        function connectWebSocket() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+
+            if (socket && socket.connected) {
+                addMessage('System', 'Already connected', 'system');
+                return;
+            }
+
+            currentUserId = userId;
+            updateStatus('connecting', 'Connecting...');
+            
+            // Create Socket.IO connection
+            socket = io('http://localhost:8003', {
+                path: '/ws/socket.io',
+                auth: { user_id: userId },
+                transports: ['websocket', 'polling']
+            });
+
+            // Connection successful
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected');
+                updateStatus('connected', 'Connected ✅');
+                addMessage('System', `Connected as user: ${userId}`, 'system');
+            });
+
+            // Server confirmation
+            socket.on('connected', (data) => {
+                console.log('Server message:', data);
+                addMessage('Server', data.message, 'system');
+            });
+
+            // Parsing progress updates
+            socket.on('parsing_progress', (data) => {
+                console.log('📊 Progress:', data);
+                addProgressMessage(data);
+            });
+
+            // Parsing complete
+            socket.on('parsing_complete', (data) => {
+                console.log('✅ Complete:', data);
+                addCompleteMessage(data);
+            });
+
+            // Batch progress
+            socket.on('batch_progress', (data) => {
+                console.log('📦 Batch:', data);
+                addBatchMessage(data);
+            });
+
+            // Disconnection
+            socket.on('disconnect', () => {
+                console.log('❌ WebSocket disconnected');
+                updateStatus('disconnected', 'Disconnected');
+                addMessage('System', 'Disconnected from server', 'error');
+            });
+
+            // Errors
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                updateStatus('disconnected', 'Connection Failed');
+                addMessage('Error', `Failed to connect: ${error.message}`, 'error');
+            });
+        }
+
+        function disconnectWebSocket() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus('disconnected', 'Disconnected');
+                addMessage('System', 'Manually disconnected', 'system');
+            }
+        }
+
+        function updateStatus(type, text) {
+            const statusEl = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            statusEl.className = `status ${type}`;
+            statusText.textContent = text;
+        }
+
+        function addMessage(title, content, type) {
+            const messagesDiv = document.getElementById('messages');
+            
+            // Remove empty state
+            const emptyState = messagesDiv.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                <div class="message-title">${title}</div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${getCurrentTime()}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addProgressMessage(data) {
+            const messagesDiv = document.getElementById('messages');
+            
+            // Remove empty state
+            const emptyState = messagesDiv.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message progress';
+            messageDiv.innerHTML = `
+                <div class="message-title">📄 ${data.filename}</div>
+                <div class="message-content">
+                    <strong>[${data.stage}]</strong> ${data.message}
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: ${data.progress}%"></div>
+                </div>
+                <div class="message-time">${data.progress}% • ${getCurrentTime()}</div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addCompleteMessage(data) {
+            const type = data.success ? 'complete' : 'error';
+            const icon = data.success ? '✅' : '❌';
+            const message = data.success 
+                ? 'Parsing completed successfully!'
+                : `Parsing failed: ${data.error}`;
+
+            addMessage(`${icon} ${data.filename}`, message, type);
+        }
+
+        function addBatchMessage(data) {
+            const message = `Batch Progress: ${data.completed + data.failed}/${data.total} (${data.progress}%)`;
+            addMessage('📦 Batch Upload', message, 'progress');
+        }
+
+        function clearMessages() {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                    </svg>
+                    <p>No messages yet. Connect to start receiving updates!</p>
+                </div>
+            `;
+        }
+
+        function getCurrentTime() {
+            return new Date().toLocaleTimeString();
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                connectWebSocket();
+            }
+            if (e.ctrlKey && e.key === 'c') {
+                clearMessages();
+            }
+        });
+    </script>
+</body>
+</html>
