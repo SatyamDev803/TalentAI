@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from common.config import BaseConfig
@@ -14,12 +15,15 @@ settings = BaseConfig()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Auth Service...")
+
     try:
         await init_redis()
+        logger.info("Redis connected")
     except Exception as e:
         logger.warning(f"Redis initialization warning: {e}")
 
     yield
+
     logger.info("Shutting down Auth Service...")
     try:
         await close_redis()
