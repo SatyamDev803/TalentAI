@@ -1,12 +1,15 @@
 from typing import List
 
-from common.logger import logger
+from common.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.deps import get_current_active_user, require_role
 from app.models.user import User, UserRole
 from app.schemas.user import UserRead, UserUpdate
 from app.services.auth_service import AuthService, get_auth_service
+
+logger = get_logger(__name__)
+
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

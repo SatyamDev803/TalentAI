@@ -1,5 +1,3 @@
-"""Export utilities for search results."""
-
 import csv
 import json
 import logging
@@ -12,15 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def export_search_results_csv(results: List[ResumeSearchResult], query: str) -> str:
-    """Export search results as CSV string.
 
-    Args:
-        results: List of search results
-        query: Search query
-
-    Returns:
-        CSV string
-    """
     output = StringIO()
     writer = csv.writer(output)
 
@@ -75,7 +65,7 @@ def export_search_results_csv(results: List[ResumeSearchResult], query: str) -> 
     csv_content = output.getvalue()
     output.close()
 
-    logger.info(f"✅ Exported {len(results)} results to CSV")
+    logger.info(f"Exported {len(results)} results to CSV")
 
     return csv_content
 
@@ -83,16 +73,7 @@ def export_search_results_csv(results: List[ResumeSearchResult], query: str) -> 
 def export_search_results_json(
     results: List[ResumeSearchResult], query: str, metadata: dict
 ) -> str:
-    """Export search results as JSON string.
 
-    Args:
-        results: List of search results
-        query: Search query
-        metadata: Search metadata
-
-    Returns:
-        JSON string
-    """
     # Build JSON structure
     export_data = {
         "query": query,
@@ -126,6 +107,6 @@ def export_search_results_json(
 
     json_content = json.dumps(export_data, indent=2, default=str)
 
-    logger.info(f"✅ Exported {len(results)} results to JSON")
+    logger.info(f"Exported {len(results)} results to JSON")
 
     return json_content

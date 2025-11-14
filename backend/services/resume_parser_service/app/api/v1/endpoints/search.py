@@ -1,8 +1,6 @@
-"""Search endpoints with enhanced responses."""
-
 import hashlib
 import json
-import logging
+import io
 import time
 import uuid
 from typing import List
@@ -15,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import RedisCache
 from app.core.deps import get_cache_client, get_current_active_user, get_db
 from app.models.resume import Resume
-from app.schemas.resume import ResumeResponse
+from app.schemas.resume import ResumeRead
 from app.schemas.search import (
     EnhancedSearchResponse,
     ResumeSearchResult,
@@ -26,18 +24,15 @@ from app.utils.embedding_generator import (
     generate_resume_embedding,
 )
 from app.utils.match_explainer import generate_match_reasons
-
-import io
-
 from app.utils.export import export_search_results_csv, export_search_results_json
-
+from common.logging import get_logger
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__)
 
 
 def unwrap_resume_fields(resume):
-    """Helper to unwrap experience and education from dict wrappers."""
     experience_list = []
     if resume.experience:
         if isinstance(resume.experience, dict) and "entries" in resume.experience:
@@ -69,17 +64,14 @@ async def semantic_search_enhanced(
     ),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
-    cache: RedisCache = Depends(get_cache_client),  # ← ADD THIS
+    cache: RedisCache = Depends(get_cache_client),
 ):
-    """Enhanced semantic search with Redis caching for 94x speed improvement."""
+
     start_time = time.time()
 
-    # Get user ID
     user_id = current_user.get("sub") or current_user.get("user_id")
 
-    # ═══════════════════════════════════════════════════════════
-    # STEP 1: Generate Cache Key
-    # ═══════════════════════════════════════════════════════════
+    # Generate Cache Key
     cache_data = {
         "query": query.lower().strip(),
         "top_k": top_k,
@@ -90,14 +82,12 @@ async def semantic_search_enhanced(
     ).hexdigest()
     cache_key = f"user:{user_id}:search:semantic:{cache_key_hash}"
 
-    # ═══════════════════════════════════════════════════════════
-    # STEP 2: Try Cache First
-    # ═══════════════════════════════════════════════════════════
+    # Try Cache First
     cached_result = await cache.get(cache_key)
     if cached_result:
         cache_time = time.time() - start_time
         logger.info(
-            f"💾 CACHE HIT: '{query}' returned in {cache_time:.3f}s (saved ~4.5s!)"
+            f"CACHE HIT: '{query}' returned in {cache_time:.3f}s (saved ~4.5s!)"
         )
 
         # Add cache metadata
@@ -107,12 +97,8 @@ async def semantic_search_enhanced(
 
         return EnhancedSearchResponse(**cached_result)
 
-    logger.info(f"⚡ CACHE MISS: '{query}' - computing fresh results...")
-    logger.info(f"🔍 Semantic search: '{query}' (top_k={top_k}, min_score={min_score})")
-
-    # ═══════════════════════════════════════════════════════════
-    # STEP 3: Your Existing Search Logic (unchanged)
-    # ═══════════════════════════════════════════════════════════
+    logger.info(f"Cache miss: '{query}' - computing fresh results...")
+    logger.info(f"Semantic search: '{query}' (top_k={top_k}, min_score={min_score})")
 
     # Generate query embedding from search query
     query_words = query.split()
@@ -129,7 +115,7 @@ async def semantic_search_enhanced(
 
     query_embedding = generate_resume_embedding(query_data)
     logger.info(
-        f"✅ Generated query embedding: dim={len(query_embedding)}, query='{query}'"
+        f"Generated query embedding: dim={len(query_embedding)}, query='{query}'"
     )
 
     # Get all resumes with embeddings
@@ -141,9 +127,9 @@ async def semantic_search_enhanced(
     )
 
     resumes = result.scalars().all()
-    logger.info(f"📊 Found {len(resumes)} resumes with embeddings")
+    logger.info(f"Found {len(resumes)} resumes with embeddings")
 
-    # Debug: Log each resume
+    # Log each resume
     for i, resume in enumerate(resumes):
         emb_status = (
             "None" if resume.embedding is None else f"dim={len(resume.embedding)}"
@@ -153,7 +139,7 @@ async def semantic_search_enhanced(
         )
 
     if not resumes:
-        logger.warning("⚠️  No resumes with embeddings found")
+        logger.warning("No resumes with embeddings found")
         empty_response = {
             "results": [],
             "metadata": {
@@ -173,30 +159,28 @@ async def semantic_search_enhanced(
             try:
                 score = calculate_similarity(query_embedding, resume.embedding)
                 similarities.append((resume, score))
-                logger.info(f"  ✓ {resume.filename}: score={score:.3f}")
+                logger.info(f"  {resume.filename}: score={score:.3f}")
             except Exception as e:
-                logger.error(
-                    f"  ✗ {resume.filename}: Error calculating similarity: {e}"
-                )
+                logger.error(f"  {resume.filename}: Error calculating similarity: {e}")
         else:
             logger.warning(
-                f"  ✗ {resume.filename}: No embedding (embedding={resume.embedding})"
+                f"  {resume.filename}: No embedding (embedding={resume.embedding})"
             )
 
-    logger.info(f"✅ Calculated {len(similarities)} similarity scores")
+    logger.info(f"Calculated {len(similarities)} similarity scores")
 
     # Sort by similarity (highest first)
     similarities.sort(key=lambda x: x[1], reverse=True)
 
     # Filter by min_score
     filtered = [(resume, score) for resume, score in similarities if score >= min_score]
-    logger.info(f"📊 Filtered: {len(filtered)} resumes above threshold {min_score}")
+    logger.info(f"Filtered: {len(filtered)} resumes above threshold {min_score}")
 
     # Take top_k
     top_results = filtered[:top_k]
 
     logger.info(
-        f"✅ Found {len(filtered)} resumes above threshold {min_score}, "
+        f"Found {len(filtered)} resumes above threshold {min_score}, "
         f"returning top {len(top_results)}"
     )
 
@@ -211,7 +195,7 @@ async def semantic_search_enhanced(
 
         # Create result
         enhanced_result = ResumeSearchResult(
-            resume=ResumeResponse.model_validate(resume_dict),
+            resume=ResumeRead.model_validate(resume_dict),
             similarity_score=round(score, 3),
             match_percentage=int(score * 100),
             match_reasons=reasons,
@@ -228,9 +212,7 @@ async def semantic_search_enhanced(
     # Calculate search time
     search_time = time.time() - start_time
 
-    # ═══════════════════════════════════════════════════════════
-    # STEP 4: Build Response
-    # ═══════════════════════════════════════════════════════════
+    # Build Response
 
     response_dict = {
         "results": [r.model_dump() for r in enhanced_results],
@@ -244,25 +226,20 @@ async def semantic_search_enhanced(
         "cached": False,
     }
 
-    # ═══════════════════════════════════════════════════════════
-    # STEP 5: Cache the Result
-    # ═══════════════════════════════════════════════════════════
+    # Cache the Result
 
     cache_success = await cache.set(cache_key, response_dict, ttl=3600)
 
     if cache_success:
-        logger.info(
-            f"💾 Cached search results for: '{query}' (key: {cache_key[:30]}...)"
-        )
+        logger.info(f"Cached search results for: '{query}' (key: {cache_key[:30]}...)")
     else:
-        logger.warning(f"⚠️  Failed to cache results for: '{query}'")
+        logger.warning(f"Failed to cache results for: '{query}'")
 
     logger.info(
-        f"✅ Search completed in {search_time:.3f}s "
+        f"Search completed in {search_time:.3f}s "
         f"(query='{query}', results={len(enhanced_results)})"
     )
 
-    # Build response
     response = EnhancedSearchResponse(
         results=enhanced_results,
         metadata=SearchMetadata(
@@ -277,7 +254,7 @@ async def semantic_search_enhanced(
     return response
 
 
-@router.get("/similar/{resume_id}", response_model=List[ResumeResponse])
+@router.get("/similar/{resume_id}", response_model=List[ResumeRead])
 async def find_similar_resumes(
     resume_id: uuid.UUID,
     top_k: int = Query(5, ge=1, le=20, description="Number of similar resumes"),
@@ -287,8 +264,7 @@ async def find_similar_resumes(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    """Find resumes similar to a given resume."""
-    logger.info(f"🔍 Finding similar resumes to: {resume_id}")
+    logger.info(f"Finding similar resumes to: {resume_id}")
 
     # Get target resume
     result = await db.execute(
@@ -331,26 +307,25 @@ async def find_similar_resumes(
     # Take top_k
     top_results = similarities[:top_k]
 
-    logger.info(f"✅ Found {len(top_results)} similar resumes")
+    logger.info(f"Found {len(top_results)} similar resumes")
 
     # Unwrap fields for each resume
     return [
-        ResumeResponse.model_validate(unwrap_resume_fields(resume))
+        ResumeRead.model_validate(unwrap_resume_fields(resume))
         for resume, score in top_results
     ]
 
 
-@router.get("/skills", response_model=List[ResumeResponse])
+@router.get("/skills", response_model=List[ResumeRead])
 async def search_by_skills(
     skills: str = Query(..., description="Comma-separated skills"),
     match_all: bool = Query(False, description="Require all skills"),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    """Search resumes by specific skills."""
     skill_list = [s.strip().lower() for s in skills.split(",")]
 
-    logger.info(f"🔍 Skill search: {skill_list} (match_all={match_all})")
+    logger.info(f"Skill search: {skill_list} (match_all={match_all})")
 
     # Get all resumes
     result = await db.execute(
@@ -387,11 +362,11 @@ async def search_by_skills(
             if any(skill in resume_skills for skill in skill_list):
                 matching_resumes.append(resume)
 
-    logger.info(f"✅ Found {len(matching_resumes)} matching resumes")
+    logger.info(f"Found {len(matching_resumes)} matching resumes")
 
     # Unwrap fields for each resume
     return [
-        ResumeResponse.model_validate(unwrap_resume_fields(resume))
+        ResumeRead.model_validate(unwrap_resume_fields(resume))
         for resume in matching_resumes
     ]
 
@@ -407,8 +382,7 @@ async def export_search_results(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    """Export search results as CSV or JSON file."""
-    logger.info(f"📊 Export request: '{query}' format={format}")
+    logger.info(f"Export request: '{query}' format={format}")
 
     # Reuse the enhanced semantic search logic
     start_time = time.time()
@@ -470,7 +444,7 @@ async def export_search_results(
         reasons = generate_match_reasons(resume, query, score)
         resume_dict = unwrap_resume_fields(resume)
         enhanced_result = ResumeSearchResult(
-            resume=ResumeResponse.model_validate(resume_dict),
+            resume=ResumeRead.model_validate(resume_dict),
             similarity_score=round(score, 3),
             match_percentage=int(score * 100),
             match_reasons=reasons,
@@ -493,7 +467,7 @@ async def export_search_results(
         media_type = "application/json"
         filename = f"search_results_{query.replace(' ', '_')[:20]}.json"
 
-    logger.info(f"✅ Exported {len(enhanced_results)} results as {format}")
+    logger.info(f"Exported {len(enhanced_results)} results as {format}")
 
     # Stream response
     return StreamingResponse(
@@ -511,7 +485,6 @@ async def get_cache_stats(
     cache: RedisCache = Depends(get_cache_client),
     current_user=Depends(get_current_active_user),
 ):
-    """Get Redis cache statistics."""
     user_id = current_user.get("sub") or current_user.get("user_id")
     stats = await cache.get_stats()
 
@@ -531,7 +504,6 @@ async def clear_user_cache(
     cache: RedisCache = Depends(get_cache_client),
     current_user=Depends(get_current_active_user),
 ):
-    """Clear all cached search results for the current user."""
     user_id = current_user.get("sub") or current_user.get("user_id")
     deleted_count = await cache.clear_user_cache(str(user_id))
 

@@ -1,6 +1,3 @@
-"""File upload utilities."""
-
-import os
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -19,18 +16,7 @@ async def save_uploaded_file(
     file: UploadFile,
     user_id: uuid.UUID,
 ) -> tuple[str, int]:
-    """Save uploaded file and return file path and size.
 
-    Args:
-        file: Uploaded file
-        user_id: User ID for organizing files
-
-    Returns:
-        Tuple of (file_path, file_size)
-
-    Raises:
-        HTTPException: If file validation fails
-    """
     # Validate file type
     if not file.filename:
         raise HTTPException(
@@ -80,14 +66,7 @@ async def save_uploaded_file(
 
 
 def delete_file(file_path: str) -> bool:
-    """Delete a file from filesystem.
 
-    Args:
-        file_path: Path to file
-
-    Returns:
-        True if deleted successfully
-    """
     try:
         path = Path(file_path)
         if path.exists():
@@ -99,14 +78,7 @@ def delete_file(file_path: str) -> bool:
 
 
 def get_file_size(file_path: str) -> Optional[int]:
-    """Get file size in bytes.
 
-    Args:
-        file_path: Path to file
-
-    Returns:
-        File size or None if file doesn't exist
-    """
     try:
         path = Path(file_path)
         if path.exists():

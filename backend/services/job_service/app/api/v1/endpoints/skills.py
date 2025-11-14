@@ -1,10 +1,12 @@
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import get_current_active_user, get_skill_service, require_role
 from app.schemas.skill import SkillCreate, SkillListResponse, SkillRead
 from app.services.skill_service import SkillService
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/skills", tags=["Skills"])
 

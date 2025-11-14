@@ -1,84 +1,11 @@
-import uuid
-from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 import jwt
-from passlib.context import CryptContext
+from common.logging import get_logger
 
-from app.core.config import JobServiceConfig
+from app.core.config import settings
 
-pwd_context = CryptContext(
-    schemes=["argon2"],
-    deprecated="auto",
-)
-
-settings = JobServiceConfig()
-
-
-def hash_password(password: str) -> str:
-    password = password[: settings.password_max_length]
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def create_access_token(
-    subject: str,
-    expires_delta: Optional[timedelta] = None,
-) -> tuple[str, str]:
-
-    if expires_delta is None:
-        expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
-
-    jti = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
-    expire = now + expires_delta
-
-    to_encode = {
-        "sub": subject,
-        "exp": int(expire.timestamp()),
-        "iat": int(now.timestamp()),
-        "jti": jti,
-        "type": "access",
-    }
-
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
-
-    return encoded_jwt, jti
-
-
-def create_refresh_token(
-    subject: str,
-    expires_delta: Optional[timedelta] = None,
-) -> tuple[str, str]:
-    if expires_delta is None:
-        expires_delta = timedelta(days=settings.refresh_token_expire_days)
-
-    jti = str(uuid.uuid4())
-    now = datetime.now(timezone.utc)
-    expire = now + expires_delta
-
-    to_encode = {
-        "sub": subject,
-        "exp": int(expire.timestamp()),
-        "iat": int(now.timestamp()),
-        "jti": jti,
-        "type": "refresh",
-    }
-
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
-
-    return encoded_jwt, jti
+logger = get_logger(__name__)
 
 
 def decode_token(token: str) -> Optional[Dict]:
@@ -90,19 +17,8 @@ def decode_token(token: str) -> Optional[Dict]:
         )
         return payload
     except jwt.ExpiredSignatureError:
+        logger.debug("Token expired")
         return None
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        logger.debug(f"Invalid token: {e}")
         return None
-
-
-def create_tokens(user_id: str) -> Dict[str, str]:
-    access_token, access_jti = create_access_token(user_id)
-    refresh_token, refresh_jti = create_refresh_token(user_id)
-
-    return {
-        "access_token": access_token,
-        "access_jti": access_jti,
-        "refresh_token": refresh_token,
-        "refresh_jti": refresh_jti,
-        "token_type": "bearer",
-    }

@@ -213,7 +213,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>🚀 Resume Parser - WebSocket Test</h1>
+            <h1>Resume Parser - WebSocket Test</h1>
             <div class="status disconnected" id="status">
                 <span id="status-text">Disconnected</span>
             </div>
@@ -250,7 +250,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('🚀 Resume Parser WebSocket Test loaded');
+            console.log('Resume Parser WebSocket Test loaded');
             updateStatus('disconnected', 'Disconnected');
         });
 
@@ -279,8 +279,8 @@
 
             // Connection successful
             socket.on('connect', () => {
-                console.log('✅ WebSocket connected');
-                updateStatus('connected', 'Connected ✅');
+                console.log('WebSocket connected');
+                updateStatus('connected', 'Connected');
                 addMessage('System', `Connected as user: ${userId}`, 'system');
             });
 
@@ -292,25 +292,25 @@
 
             // Parsing progress updates
             socket.on('parsing_progress', (data) => {
-                console.log('📊 Progress:', data);
+                console.log('Progress:', data);
                 addProgressMessage(data);
             });
 
             // Parsing complete
             socket.on('parsing_complete', (data) => {
-                console.log('✅ Complete:', data);
+                console.log('Complete:', data);
                 addCompleteMessage(data);
             });
 
             // Batch progress
             socket.on('batch_progress', (data) => {
-                console.log('📦 Batch:', data);
+                console.log('Batch:', data);
                 addBatchMessage(data);
             });
 
             // Disconnection
             socket.on('disconnect', () => {
-                console.log('❌ WebSocket disconnected');
+                console.log('WebSocket disconnected');
                 updateStatus('disconnected', 'Disconnected');
                 addMessage('System', 'Disconnected from server', 'error');
             });
@@ -373,7 +373,7 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message progress';
             messageDiv.innerHTML = `
-                <div class="message-title">📄 ${data.filename}</div>
+                <div class="message-title">${data.filename}</div>
                 <div class="message-content">
                     <strong>[${data.stage}]</strong> ${data.message}
                 </div>
@@ -399,7 +399,7 @@
 
         function addBatchMessage(data) {
             const message = `Batch Progress: ${data.completed + data.failed}/${data.total} (${data.progress}%)`;
-            addMessage('📦 Batch Upload', message, 'progress');
+            addMessage('Batch Upload', message, 'progress');
         }
 
         function clearMessages() {

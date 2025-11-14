@@ -1,42 +1,31 @@
-"""Generate AI-powered professional summaries using multiple LLM providers."""
-
-import logging
 from typing import Optional
+from google import genai
+from openai import OpenAI
 
+
+from common.logging import get_logger
 from app.core.config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Check available providers
 HAS_GEMINI = False
 HAS_OPENAI = False
 
 try:
-    from google import genai
-
     HAS_GEMINI = True
-    logger.info("✅ Google Gemini available")
+    logger.info("Google Gemini available")
 except ImportError:
-    logger.warning("⚠️  google-genai not installed. Gemini will be disabled.")
+    logger.warning("google-genai not installed. Gemini will be disabled.")
 
 try:
-    from openai import OpenAI
-
     HAS_OPENAI = True
-    logger.info("✅ OpenAI available")
+    logger.info("OpenAI available")
 except ImportError:
-    logger.warning("⚠️  OpenAI not installed. OpenAI will be disabled.")
+    logger.warning("OpenAI not installed. OpenAI will be disabled.")
 
 
 def generate_with_gemini(context: str) -> Optional[str]:
-    """Generate summary using Google Gemini (NEW API).
-
-    Args:
-        context: Resume context
-
-    Returns:
-        Generated summary or None
-    """
     if not HAS_GEMINI:
         logger.warning("Gemini not available")
         return None
@@ -46,7 +35,6 @@ def generate_with_gemini(context: str) -> Optional[str]:
         return None
 
     try:
-        # Use NEW Gemini API
         client = genai.Client(api_key=settings.google_api_key)
 
         # Create prompt
@@ -59,7 +47,6 @@ Resume Information:
 
 Professional Summary:"""
 
-        # Generate with new API
         response = client.models.generate_content(
             model=settings.gemini_model,
             contents=prompt,
@@ -67,23 +54,15 @@ Professional Summary:"""
 
         summary = response.text.strip()
 
-        logger.info(f"✅ Generated summary with Gemini ({len(summary)} chars)")
+        logger.info(f"Generated summary with Gemini ({len(summary)} chars)")
         return summary
 
     except Exception as e:
-        logger.error(f"❌ Gemini error: {e}")
+        logger.error(f"Gemini error: {e}")
         return None
 
 
 def generate_with_openai(context: str) -> Optional[str]:
-    """Generate summary using OpenAI.
-
-    Args:
-        context: Resume context
-
-    Returns:
-        Generated summary or None
-    """
     if not HAS_OPENAI:
         logger.warning("OpenAI not available")
         return None
@@ -116,23 +95,16 @@ Professional Summary:"""
 
         summary = response.choices[0].message.content.strip()
 
-        logger.info(f"✅ Generated summary with OpenAI ({len(summary)} chars)")
+        logger.info(f"Generated summary with OpenAI ({len(summary)} chars)")
         return summary
 
     except Exception as e:
-        logger.error(f"❌ OpenAI error: {e}")
+        logger.error(f"OpenAI error: {e}")
         return None
 
 
 def generate_fallback_summary(resume_data: dict) -> str:
-    """Generate rule-based summary when AI is unavailable.
 
-    Args:
-        resume_data: Parsed resume dictionary
-
-    Returns:
-        Generated summary
-    """
     parts = []
 
     # Experience level
@@ -176,12 +148,11 @@ def generate_fallback_summary(resume_data: dict) -> str:
             parts.append("with advanced degree")
 
     summary = " ".join(parts) + "."
-    logger.info(f"✅ Generated fallback summary ({len(summary)} chars)")
+    logger.info(f"Generated fallback summary ({len(summary)} chars)")
     return summary
 
 
 def build_context_from_resume(resume_data: dict) -> str:
-    """Build context string from resume data."""
     context_parts = []
 
     if resume_data.get("full_name"):
@@ -221,14 +192,6 @@ def build_context_from_resume(resume_data: dict) -> str:
 
 
 def generate_professional_summary(resume_data: dict) -> str:
-    """Generate professional summary with multi-provider fallback.
-
-    Args:
-        resume_data: Parsed resume dictionary
-
-    Returns:
-        Generated summary (always returns something)
-    """
     # Build context
     context = build_context_from_resume(resume_data)
 
@@ -238,7 +201,7 @@ def generate_professional_summary(resume_data: dict) -> str:
 
     # Try providers in priority order
     for provider in settings.llm_providers_list:
-        logger.info(f"🔄 Trying LLM provider: {provider}")
+        logger.info(f"Trying LLM provider: {provider}")
 
         if provider == "gemini":
             summary = generate_with_gemini(context)
@@ -253,6 +216,5 @@ def generate_professional_summary(resume_data: dict) -> str:
         elif provider == "fallback":
             return generate_fallback_summary(resume_data)
 
-    # Final fallback
     logger.warning("All providers failed, using final fallback")
     return generate_fallback_summary(resume_data)

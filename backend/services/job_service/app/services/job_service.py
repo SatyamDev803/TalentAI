@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger, setup_logging
 from common.redis_client import redis_client
 
 from sqlalchemy import desc, func, select
@@ -14,6 +14,9 @@ from app.models.job import Job, JobStatus
 from app.schemas.application import ApplicationCreate
 from app.schemas.job import JobCreate, JobUpdate
 from app.services.embedding_service import embedding_service
+
+
+logger = get_logger(__name__)
 
 
 class JobService:

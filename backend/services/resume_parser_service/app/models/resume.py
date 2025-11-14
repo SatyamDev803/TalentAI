@@ -1,5 +1,3 @@
-"""Resume database model."""
-
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -13,11 +11,9 @@ from app.db.base import Base
 
 
 class Resume(Base):
-    """Resume model with ML embeddings and duplicate detection."""
 
     __tablename__ = "resumes"
 
-    # Primary Key
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -25,7 +21,6 @@ class Resume(Base):
         index=True,
     )
 
-    # User Information
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         nullable=False,
@@ -39,7 +34,7 @@ class Resume(Base):
     file_type: Mapped[str] = mapped_column(String(10), nullable=False)
     file_hash: Mapped[Optional[str]] = mapped_column(
         String(64), nullable=True, index=True
-    )  # NEW: SHA-256 hash for duplicate detection
+    )
 
     # Extracted Content
     raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -53,9 +48,7 @@ class Resume(Base):
 
     # Professional Summary
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    ai_generated_summary: Mapped[Optional[str]] = mapped_column(
-        Text, nullable=True
-    )  # NEW: AI-generated professional summary
+    ai_generated_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     total_experience_years: Mapped[Optional[float]] = mapped_column(
         Float, nullable=True
     )

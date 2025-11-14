@@ -1,5 +1,6 @@
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger
+
 from common.validators import validate_uuid
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 
@@ -12,6 +13,8 @@ from app.schemas.application import (
 from app.schemas.job import JobCreate, JobListResponse, JobRead, JobUpdate
 from app.services.job_service import JobService
 from app.core.security import decode_token
+
+logger = get_logger(__name__)
 
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])

@@ -5,14 +5,15 @@ from typing import Dict, Optional
 import jwt
 from passlib.context import CryptContext
 
-from app.core.config import AuthConfig
+from app.core.config import settings
+from common.logging import get_logger
+
+logger = get_logger(__name__)
 
 pwd_context = CryptContext(
     schemes=["argon2"],
     deprecated="auto",
 )
-
-settings = AuthConfig()
 
 
 def hash_password(password: str) -> str:
@@ -27,11 +28,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(
     subject: str,
     role: str = "CANDIDATE",
-    email: str = None,
-    company_id: str = None,
+    email: Optional[str] = None,
+    company_id: Optional[str] = None,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.access_token_expire_minutes)
 
@@ -39,7 +39,8 @@ def create_access_token(
     now = datetime.now(timezone.utc)
     expire = now + expires_delta
 
-    if hasattr(role, "value"):  # Check if it's an enum
+    # Handle enum role
+    if hasattr(role, "value"):
         role_str = role.value
     else:
         role_str = str(role)
@@ -61,6 +62,7 @@ def create_access_token(
         algorithm=settings.jwt_algorithm,
     )
 
+    logger.debug(f"Created access token for user {subject}")
     return encoded_jwt, jti
 
 
@@ -68,7 +70,6 @@ def create_refresh_token(
     subject: str,
     expires_delta: Optional[timedelta] = None,
 ) -> tuple[str, str]:
-
     if expires_delta is None:
         expires_delta = timedelta(days=settings.refresh_token_expire_days)
 
@@ -90,6 +91,7 @@ def create_refresh_token(
         algorithm=settings.jwt_algorithm,
     )
 
+    logger.debug(f"Created refresh token for user {subject}")
     return encoded_jwt, jti
 
 
@@ -102,27 +104,28 @@ def decode_token(token: str) -> Optional[Dict]:
         )
         return payload
     except jwt.ExpiredSignatureError:
+        logger.debug("Token expired")
         return None
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        logger.debug(f"Invalid token: {e}")
         return None
 
 
 def create_tokens(
     user_id: str,
     role: str = "CANDIDATE",
-    email: str = None,
-    company_id: str = None,
+    email: Optional[str] = None,
+    company_id: Optional[str] = None,
 ) -> Dict[str, str]:
 
+    # Handle enum role
     if hasattr(role, "value"):
         role_value = role.value
     else:
         role_value = str(role)
 
-    if company_id:
-        company_id_str = str(company_id)
-    else:
-        company_id_str = None
+    # Ensure company_id is string or None
+    company_id_str = str(company_id) if company_id else None
 
     access_token, access_jti = create_access_token(
         user_id,

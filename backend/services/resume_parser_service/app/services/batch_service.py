@@ -1,6 +1,3 @@
-"""Batch operations service."""
-
-import logging
 import time
 import uuid
 from pathlib import Path
@@ -9,13 +6,13 @@ from typing import List
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.resume import Resume
 from app.schemas.batch import BatchUploadResult, BatchUploadResponse
 from app.schemas.resume import ResumeCreate
 from app.services.resume_service import ResumeService
-from app.core.config import settings  # ← FIXED: Use settings instance
+from app.core.config import settings
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Configuration
 MAX_BATCH_SIZE = 10
@@ -24,14 +21,9 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
 
 
 class BatchService:
-    """Service for batch resume operations."""
 
     def __init__(self, db: AsyncSession):
-        """Initialize batch service.
 
-        Args:
-            db: Database session
-        """
         self.db = db
         self.resume_service = ResumeService(db)
 
@@ -41,19 +33,10 @@ class BatchService:
         user_id: uuid.UUID,
         upload_dir: Path,
     ) -> BatchUploadResponse:
-        """Upload multiple resumes at once.
 
-        Args:
-            files: List of uploaded files
-            user_id: User uploading the resumes
-            upload_dir: Directory to save files
-
-        Returns:
-            Batch upload response with per-file results
-        """
         start_time = time.time()
 
-        logger.info(f"📦 Batch upload: {len(files)} files from user {user_id}")
+        logger.info(f"Batch upload: {len(files)} files from user {user_id}")
 
         # Validate batch size
         if len(files) > MAX_BATCH_SIZE:
@@ -94,7 +77,7 @@ class BatchService:
         processing_time = time.time() - start_time
 
         logger.info(
-            f"✅ Batch upload complete: "
+            f"Batch upload complete: "
             f"{uploaded_count} uploaded, "
             f"{failed_count} failed, "
             f"{skipped_count} skipped "
@@ -116,14 +99,12 @@ class BatchService:
         user_id: uuid.UUID,
         upload_dir: Path,
     ) -> BatchUploadResult:
-        """Process a single file in batch upload."""
         filename = file.filename or "unknown"
 
         try:
-            # Validate file
             validation_error = self._validate_file(file)
             if validation_error:
-                logger.warning(f"❌ {filename}: {validation_error}")
+                logger.warning(f"{filename}: {validation_error}")
                 return BatchUploadResult(
                     filename=filename,
                     status="skipped",
@@ -150,8 +131,8 @@ class BatchService:
             # Create unique filename
             unique_filename = f"{uuid.uuid4()}{file_extension}"
 
-            # ✅ FIXED: Create user directory with "resumes" subdirectory
-            user_dir = upload_dir / "resumes" / str(user_id)  # ← ADD "resumes" HERE!
+            # Create user directory with "resumes" subdirectory
+            user_dir = upload_dir / "resumes" / str(user_id)
             user_dir.mkdir(parents=True, exist_ok=True)
 
             # Save file
@@ -159,7 +140,7 @@ class BatchService:
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            logger.info(f"💾 File saved to: {file_path}")  # ← ADD DEBUG LOG
+            logger.info(f"File saved to: {file_path}")
 
             # Create resume record
             resume_data = ResumeCreate(
@@ -175,7 +156,7 @@ class BatchService:
             # Queue for async parsing
             queued = await self._queue_parsing_task(resume.id)
 
-            logger.info(f"✅ {filename}: Uploaded successfully")
+            logger.info(f"{filename}: Uploaded successfully")
 
             return BatchUploadResult(
                 filename=filename,
@@ -186,9 +167,7 @@ class BatchService:
             )
 
         except Exception as e:
-            logger.error(
-                f"❌ {filename}: Error - {str(e)}", exc_info=True
-            )  # ← ADD FULL TRACEBACK
+            logger.error(f"{filename}: Error - {str(e)}", exc_info=True)
             return BatchUploadResult(
                 filename=filename,
                 status="failed",
@@ -196,14 +175,7 @@ class BatchService:
             )
 
     def _validate_file(self, file: UploadFile) -> str | None:
-        """Validate uploaded file.
 
-        Args:
-            file: Uploaded file
-
-        Returns:
-            Error message if invalid, None if valid
-        """
         if not file.filename:
             return "No filename provided"
 
@@ -225,15 +197,7 @@ class BatchService:
         return None
 
     async def _queue_parsing_task(self, resume_id: uuid.UUID) -> bool:
-        """Queue resume for async parsing.
 
-        Args:
-            resume_id: Resume ID to parse
-
-        Returns:
-            bool: True if queued successfully
-        """
-        # ✅ FIXED: Check if Celery is enabled
         if not hasattr(settings, "CELERY_ENABLED") or not settings.CELERY_ENABLED:
             logger.warning("Celery not configured, skipping task queue")
             return False
@@ -244,9 +208,9 @@ class BatchService:
             # Queue task
             task = parse_resume_async.delay(str(resume_id))
 
-            logger.info(f"✅ Queued parsing task {task.id} for resume {resume_id}")
+            logger.info(f"Queued parsing task {task.id} for resume {resume_id}")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Failed to queue task: {str(e)}")
+            logger.error(f"Failed to queue task: {str(e)}")
             return False

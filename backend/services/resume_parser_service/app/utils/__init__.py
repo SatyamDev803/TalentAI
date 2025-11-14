@@ -38,7 +38,7 @@ from app.utils.ai_summary_generator import (
 )
 from app.utils.file_hash import (
     calculate_file_hash,
-    calculate_bytes_hash,
+    calculate_file_hash_from_bytes,
 )
 
 __all__ = [
@@ -74,5 +74,5 @@ __all__ = [
     "generate_professional_summary",
     # File Hash
     "calculate_file_hash",
-    "calculate_bytes_hash",
+    "calculate_file_hash_from_bytes",
 ]

@@ -1,5 +1,3 @@
-"""Test batch upload endpoints."""
-
 import io
 import pytest
 from httpx import AsyncClient
@@ -7,7 +5,6 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 async def test_batch_upload_single_file(client: AsyncClient, auth_headers):
-    """Test batch upload with single file."""
     file_content = b"%PDF-1.4\nTest Resume"
     files = [("files", ("resume1.pdf", io.BytesIO(file_content), "application/pdf"))]
 
@@ -28,7 +25,6 @@ async def test_batch_upload_single_file(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_batch_upload_multiple_files(client: AsyncClient, auth_headers):
-    """Test batch upload with multiple files."""
     files = [
         ("files", ("resume1.pdf", io.BytesIO(b"%PDF-1.4\nResume1"), "application/pdf")),
         ("files", ("resume2.pdf", io.BytesIO(b"%PDF-1.4\nResume2"), "application/pdf")),
@@ -50,7 +46,6 @@ async def test_batch_upload_multiple_files(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_batch_upload_exceeds_limit(client: AsyncClient, auth_headers):
-    """Test batch upload exceeding 10 file limit."""
     # Try to upload 11 files
     files = [
         (
@@ -79,7 +74,6 @@ async def test_batch_upload_exceeds_limit(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_batch_upload_mixed_file_types(client: AsyncClient, auth_headers):
-    """Test batch upload with valid and invalid file types."""
     files = [
         ("files", ("resume1.pdf", io.BytesIO(b"%PDF-1.4\nPDF"), "application/pdf")),
         ("files", ("invalid.txt", io.BytesIO(b"Text"), "text/plain")),
@@ -100,7 +94,6 @@ async def test_batch_upload_mixed_file_types(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_batch_upload_no_files(client: AsyncClient, auth_headers):
-    """Test batch upload with no files."""
     response = await client.post(
         "/api/v1/resumes/batch",
         files=[],

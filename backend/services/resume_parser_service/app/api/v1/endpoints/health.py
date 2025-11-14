@@ -1,5 +1,3 @@
-"""Health check endpoints for monitoring."""
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +9,6 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check():
-    """Basic health check."""
     return {"status": "healthy", "service": "resume-parser", "version": "1.0.0"}
 
 
@@ -19,7 +16,6 @@ async def health_check():
 async def detailed_health_check(
     db: AsyncSession = Depends(get_db), cache: RedisCache = Depends(get_cache)
 ):
-    """Detailed health check with dependencies."""
 
     # Check database
     db_healthy = await check_db_health()

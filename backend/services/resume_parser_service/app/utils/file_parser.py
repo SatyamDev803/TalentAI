@@ -1,10 +1,5 @@
-# New
-"""File parsing utilities for PDF, DOCX, and OCR."""
-
 import io
-import logging
 from pathlib import Path
-from typing import Optional
 
 import pytesseract
 from docx import Document
@@ -12,28 +7,17 @@ from PIL import Image
 from pypdf import PdfReader
 
 from app.core.config import settings
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FileParseError(Exception):
-    """Custom exception for file parsing errors."""
-
     pass
 
 
 def parse_pdf(file_path: str | Path) -> str:
-    """Parse text from PDF file.
 
-    Args:
-        file_path: Path to PDF file
-
-    Returns:
-        Extracted text string
-
-    Raises:
-        FileParseError: If parsing fails
-    """
     try:
         file_path = Path(file_path)
 
@@ -66,17 +50,7 @@ def parse_pdf(file_path: str | Path) -> str:
 
 
 def parse_docx(file_path: str | Path) -> str:
-    """Parse text from DOCX file.
 
-    Args:
-        file_path: Path to DOCX file
-
-    Returns:
-        Extracted text string
-
-    Raises:
-        FileParseError: If parsing fails
-    """
     try:
         file_path = Path(file_path)
 
@@ -117,18 +91,7 @@ def parse_docx(file_path: str | Path) -> str:
 
 
 def parse_with_ocr(file_path: str | Path, language: str = "eng") -> str:
-    """Parse text from image or scanned PDF using OCR.
 
-    Args:
-        file_path: Path to image file
-        language: Tesseract language code (default: 'eng')
-
-    Returns:
-        Extracted text string
-
-    Raises:
-        FileParseError: If OCR fails
-    """
     try:
         file_path = Path(file_path)
 
@@ -161,25 +124,13 @@ def parse_with_ocr(file_path: str | Path, language: str = "eng") -> str:
 
 
 def parse_file(file_path: str | Path, use_ocr: bool = False) -> str:
-    """Parse file based on extension.
 
-    Args:
-        file_path: Relative path to file (from database)
-        use_ocr: Whether to use OCR for scanned documents
-
-    Returns:
-        Extracted text string
-
-    Raises:
-        FileParseError: If parsing fails or unsupported file type
-    """
     # Convert relative path to absolute path
-    # If path is already absolute, this won't change it
     file_path = Path(file_path)
 
     # If path is relative, prepend the upload directory
     if not file_path.is_absolute():
-        base_dir = Path(__file__).resolve().parent.parent.parent  # Go to service root
+        base_dir = Path(__file__).resolve().parent.parent.parent
         file_path = base_dir / "uploads" / file_path
 
     extension = file_path.suffix.lower()
@@ -216,19 +167,7 @@ def parse_file(file_path: str | Path, use_ocr: bool = False) -> str:
 def extract_text_from_bytes(
     file_bytes: bytes, filename: str, use_ocr: bool = False
 ) -> str:
-    """Extract text from file bytes.
 
-    Args:
-        file_bytes: File content as bytes
-        filename: Original filename
-        use_ocr: Whether to use OCR
-
-    Returns:
-        Extracted text string
-
-    Raises:
-        FileParseError: If parsing fails
-    """
     extension = Path(filename).suffix.lower()
 
     logger.info(f"Parsing bytes for: {filename} (extension: {extension})")

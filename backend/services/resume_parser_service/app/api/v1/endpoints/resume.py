@@ -1,10 +1,7 @@
-"""Resume API endpoints."""
-
 import csv
 from io import StringIO
-import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 import uuid
 
@@ -19,6 +16,8 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+
 
 from app.core.cache import RedisCache
 from app.core.deps import get_cache_client, get_current_active_user, get_db, get_user_id
@@ -28,19 +27,23 @@ from app.schemas.resume import (
     ResumeRead,
     ResumeUpdate,
     ResumeUploadResponse,
-    ResumeResponse,
 )
 from app.services.resume_service import ResumeService
 from app.utils.file_upload import delete_file, save_uploaded_file
 from app.services.batch_service import BatchService
 from app.schemas.batch import BatchUploadResponse
+from common.logging import get_logger
+from app.utils.embedding_generator import get_cache_info
+from app.models.resume import Resume
+from app.schemas.resume import ResumeCreate
+
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
+# Helper to unwrap experience and education from dict wrappers
 def unwrap_resume_fields(resume):
-    """Helper to unwrap experience and education from dict wrappers."""
     experience_list = []
     if resume.experience:
         if isinstance(resume.experience, dict) and "entries" in resume.experience:
@@ -63,28 +66,11 @@ def unwrap_resume_fields(resume):
     return resume_dict
 
 
-# ═══════════════════════════════════════════════════════════
-# DEBUG ENDPOINTS (Remove in production)
-# ═══════════════════════════════════════════════════════════
+# Debug Endpoints
 
 
 @router.get("/debug/model-cache")
 async def debug_model_cache():
-    """Check embedding model cache status.
-
-    **Returns:**
-    - Cache status (cached/not cached)
-    - Model name
-    - Load time in seconds
-    - Memory usage in MB
-    - Recommendation
-
-    **Use Cases:**
-    - Verify model is preloaded
-    - Check performance metrics
-    - Monitor memory usage
-    """
-    from app.utils.embedding_generator import get_cache_info
 
     cache_info = get_cache_info()
 
@@ -94,9 +80,9 @@ async def debug_model_cache():
         "load_time_seconds": cache_info["load_time"],
         "memory_mb": cache_info["estimated_memory_mb"],
         "recommendation": (
-            "✅ Model is cached and ready"
+            "Model is cached and ready"
             if cache_info["is_cached"]
-            else "⚠️ Model will be loaded on first use"
+            else "Model will be loaded on first use"
         ),
     }
 
@@ -105,17 +91,7 @@ async def debug_model_cache():
 async def debug_websocket_connections(
     current_user: dict = Depends(get_current_active_user),
 ):
-    """Debug: Show active WebSocket connections.
 
-    **Returns:**
-    - Total users connected
-    - List of session IDs per user
-
-    **Use Cases:**
-    - Debugging duplicate connections
-    - Monitoring active sessions
-    - Connection tracking
-    """
     from app.core.websocket import connected_users
 
     return {
@@ -127,9 +103,7 @@ async def debug_websocket_connections(
     }
 
 
-# ═══════════════════════════════════════════════════════════
-# STATISTICS & EXPORT ENDPOINTS
-# ═══════════════════════════════════════════════════════════
+# Stats and export endpoints
 
 
 @router.get("/stats")
@@ -138,23 +112,13 @@ async def get_resume_stats(
     current_user: dict = Depends(get_current_active_user),
     user_id: UUID = Depends(get_user_id),
 ):
-    """Get resume statistics for current user.
 
-    **Returns:**
-    - Total resumes uploaded
-    - Parsed count
-    - With embeddings count
-    - Parsing success rate
-    """
     resume_service = ResumeService(db)
 
     # Get counts
     total = await resume_service.count_resumes(user_id)
 
-    # Get parsed count (manual query)
-    from sqlalchemy import select, func
-    from app.models.resume import Resume
-
+    # Get parsed count
     parsed = await db.execute(
         select(func.count(Resume.id)).where(
             Resume.user_id == user_id,
@@ -188,15 +152,7 @@ async def export_all_resumes_csv(
     current_user: dict = Depends(get_current_active_user),
     user_id: UUID = Depends(get_user_id),
 ):
-    """Export all user's resumes as CSV file.
 
-    **CSV Columns:**
-    - ID, Name, Email, Phone, Location
-    - Experience, Skills Count, Education Count
-    - Parsed Status, Created Date
-
-    **Download:** Opens as downloadable file
-    """
     resume_service = ResumeService(db)
 
     # Get all user's resumes
@@ -232,7 +188,7 @@ async def export_all_resumes_csv(
             elif isinstance(resume.skills, list):
                 skills_count = len(resume.skills)
 
-        # ✅ FIXED: Handle dict wrapper
+        # Handle dict wrapper
         edu_count = 0
         if resume.education:
             if isinstance(resume.education, dict) and "entries" in resume.education:
@@ -267,27 +223,26 @@ async def export_all_resumes_csv(
     )
 
 
-# ═══════════════════════════════════════════════════════════
-# BATCH UPLOAD
-# ═══════════════════════════════════════════════════════════
+# Batch upload
 
 
 @router.post("/batch", response_model=BatchUploadResponse)
 async def batch_upload_resumes(
-    files: List[UploadFile] = File(..., description="Resume files to upload"),
+    files: List[UploadFile] = File(
+        ..., description="Resume files to upload - Upto 10 Files"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_active_user),
 ):
-    """Upload multiple resumes at once (up to 10 files)."""
     user_id = uuid.UUID(current_user["sub"])
 
-    logger.info(f"📦 Batch upload request: {len(files)} files from user {user_id}")
+    logger.info(f"Batch upload request: {len(files)} files from user {user_id}")
 
     # Go up 5 levels to reach resume_parser_service/ directory
     base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
     upload_dir = base_dir / "uploads"
 
-    logger.info(f"📁 Upload directory: {upload_dir}")
+    logger.info(f"Upload directory: {upload_dir}")
 
     # Process batch
     batch_service = BatchService(db)
@@ -300,9 +255,7 @@ async def batch_upload_resumes(
     return response
 
 
-# ═══════════════════════════════════════════════════════════
-# RESUME CRUD OPERATIONS
-# ═══════════════════════════════════════════════════════════
+# Resume CRUD Operations
 
 
 @router.post(
@@ -315,17 +268,7 @@ async def upload_resume(
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache_client),
 ):
-    """Upload a resume file.
 
-    Args:
-        file: Resume file to upload
-        current_user: Current authenticated user
-        user_id: User ID from token
-        db: Database session
-
-    Returns:
-        Resume upload response with resume ID
-    """
     # Save file
     file_path, file_size = await save_uploaded_file(file, user_id)
 
@@ -334,8 +277,6 @@ async def upload_resume(
 
     # Create resume entry in database
     resume_service = ResumeService(db)
-
-    from app.schemas.resume import ResumeCreate
 
     resume_data = ResumeCreate(
         user_id=user_id,
@@ -351,7 +292,7 @@ async def upload_resume(
 
     # Clear search cache for user after upload
     await cache.clear_user_cache(str(user_id))
-    logger.info(f"🗑️  Cleared search cache for user {user_id} after upload")
+    logger.info(f"Cleared search cache for user {user_id} after upload")
 
     return ResumeUploadResponse(
         resume_id=resume.id,
@@ -370,7 +311,7 @@ async def parse_resume(
     user_id: UUID = Depends(get_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Parse a resume and extract information."""
+
     try:
         resume_service = ResumeService(db)
         parsed_data = await resume_service.parse_resume(resume_id, use_ocr)
@@ -401,18 +342,7 @@ async def get_resume_preview(
     current_user: dict = Depends(get_current_active_user),
     user_id: UUID = Depends(get_user_id),
 ):
-    """Get preview of resume raw text.
 
-    **Returns:**
-    - First N lines of resume text
-    - Total line count
-    - Filename
-
-    **Use Cases:**
-    - Quick resume preview
-    - Verify parsing quality
-    - Check OCR output
-    """
     resume_service = ResumeService(db)
     resume = await resume_service.get_resume_by_id(resume_id)
 
@@ -448,18 +378,7 @@ async def list_resumes(
     user_id: UUID = Depends(get_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """List user's resumes.
 
-    Args:
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        current_user: Current authenticated user
-        user_id: User ID from token
-        db: Database session
-
-    Returns:
-        List of user's resumes
-    """
     resume_service = ResumeService(db)
 
     resumes = await resume_service.get_resumes_by_user(user_id, skip=skip, limit=limit)
@@ -467,12 +386,12 @@ async def list_resumes(
 
     total_pages = (total + limit - 1) // limit
 
-    # ✅ FIXED: Unwrap experience and education for each resume
+    # Unwrap experience and education for each resume
     unwrapped_resumes = []
     for resume in resumes:
         try:
             resume_dict = unwrap_resume_fields(resume)
-            unwrapped_resumes.append(ResumeResponse.model_validate(resume_dict))
+            unwrapped_resumes.append(ResumeRead.model_validate(resume_dict))
         except Exception as e:
             logger.error(f"Error processing resume {resume.id}: {e}")
             # Skip problematic resumes
@@ -494,17 +413,6 @@ async def get_resume(
     user_id: UUID = Depends(get_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get resume details.
-
-    Args:
-        resume_id: Resume ID
-        current_user: Current authenticated user
-        user_id: User ID from token
-        db: Database session
-
-    Returns:
-        Resume details
-    """
     resume_service = ResumeService(db)
 
     resume = await resume_service.get_resume_by_id(resume_id)
@@ -520,7 +428,6 @@ async def get_resume(
             detail="Not authorized to access this resume",
         )
 
-    # ✅ FIXED: Unwrap experience and education
     resume_dict = unwrap_resume_fields(resume)
     return ResumeRead.model_validate(resume_dict)
 
@@ -533,18 +440,7 @@ async def update_resume(
     user_id: UUID = Depends(get_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update resume information.
 
-    Args:
-        resume_id: Resume ID
-        resume_update: Resume update data
-        current_user: Current authenticated user
-        user_id: User ID from token
-        db: Database session
-
-    Returns:
-        Updated resume
-    """
     resume_service = ResumeService(db)
 
     # Check if resume exists and belongs to user
@@ -564,7 +460,6 @@ async def update_resume(
     # Update resume
     updated_resume = await resume_service.update_resume(resume_id, resume_update)
 
-    # ✅ FIXED: Unwrap experience and education
     resume_dict = unwrap_resume_fields(updated_resume)
     return ResumeRead.model_validate(resume_dict)
 
@@ -578,15 +473,7 @@ async def delete_resume(
     db: AsyncSession = Depends(get_db),
     cache: RedisCache = Depends(get_cache_client),
 ):
-    """Delete resume.
 
-    Args:
-        resume_id: Resume ID to delete
-        hard_delete: If True, permanently delete. If False, soft delete (mark as deleted)
-
-    Returns:
-        204 No Content on success
-    """
     resume_service = ResumeService(db)
 
     # Check if resume exists and belongs to user
@@ -612,4 +499,4 @@ async def delete_resume(
 
     # Clear search cache after deletion
     await cache.clear_user_cache(str(user_id))
-    logger.info(f"🗑️  Cleared search cache for user {user_id} after deletion")
+    logger.info(f"Cleared search cache for user {user_id} after deletion")

@@ -6,14 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ResumeBase(BaseModel):
-    """Base resume schema."""
 
     filename: str = Field(..., description="Original filename")
     file_type: str = Field(..., description="File type (pdf, docx, etc.)")
 
 
 class ResumeCreate(ResumeBase):
-    """Schema for creating a resume."""
 
     user_id: UUID
     file_path: str
@@ -21,7 +19,6 @@ class ResumeCreate(ResumeBase):
 
 
 class ResumeUpdate(BaseModel):
-    """Schema for updating a resume."""
 
     full_name: Optional[str] = None
     email: Optional[str] = None
@@ -31,13 +28,12 @@ class ResumeUpdate(BaseModel):
 
 
 class ResumeParsed(BaseModel):
-    """Schema for parsed resume data."""
 
     full_name: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     location: Optional[str] = None
-    skills: Optional[dict] = None  # ✅ FIXED! Changed from list to dict
+    skills: Optional[dict] = None
     experience: Optional[list] = None
     education: Optional[list] = None
     certifications: Optional[list] = None
@@ -47,7 +43,6 @@ class ResumeParsed(BaseModel):
 
 
 class ResumeEmbedding(BaseModel):
-    """Schema for resume embedding."""
 
     resume_id: UUID
     embedding: List[float]
@@ -56,7 +51,6 @@ class ResumeEmbedding(BaseModel):
 
 
 class ResumeUploadResponse(BaseModel):
-    """Response after uploading a resume."""
 
     resume_id: UUID
     filename: str
@@ -66,7 +60,6 @@ class ResumeUploadResponse(BaseModel):
 
 
 class ResumeParseResponse(BaseModel):
-    """Response after parsing a resume."""
 
     resume_id: UUID
     message: str
@@ -76,40 +69,6 @@ class ResumeParseResponse(BaseModel):
 
 
 class ResumeRead(BaseModel):
-    """Schema for reading a single resume."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    user_id: UUID
-    filename: str
-    file_path: str
-    file_size: int
-    file_type: str
-    full_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    location: Optional[str] = None
-    summary: Optional[str] = None
-    skills: Optional[dict] = None
-    experience: Optional[list] = None
-    education: Optional[list] = None
-    certifications: Optional[list] = None
-    languages: Optional[list] = None
-    total_experience_years: Optional[float] = None
-    embedding_model: Optional[str] = None
-    is_embedding_generated: bool = False
-    is_parsed: bool = False
-    parsing_error: Optional[str] = None
-    parsing_version: Optional[str] = None
-    last_parsed_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
-    is_deleted: bool = False
-
-
-class ResumeResponse(BaseModel):
-    """Schema for resume response."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -142,9 +101,8 @@ class ResumeResponse(BaseModel):
 
 
 class ResumeList(BaseModel):
-    """Schema for list of resumes."""
 
-    resumes: List[ResumeResponse]
+    resumes: List[ResumeRead]
     total: int
     page: int
     page_size: int
@@ -152,7 +110,6 @@ class ResumeList(BaseModel):
 
 
 class ResumeStats(BaseModel):
-    """Schema for resume statistics."""
 
     total_resumes: int
     parsed_resumes: int
@@ -162,7 +119,6 @@ class ResumeStats(BaseModel):
 
 
 class ResumePreview(BaseModel):
-    """Schema for resume text preview."""
 
     resume_id: UUID
     filename: str

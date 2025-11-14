@@ -1,5 +1,3 @@
-"""Celery application configuration."""
-
 import logging
 from celery import Celery
 from app.core.config import settings
@@ -29,11 +27,11 @@ celery_app.conf.update(
     task_reject_on_worker_lost=True,
 )
 
-# Auto-discover tasks
+# Auto discover tasks
 celery_app.autodiscover_tasks(
     [
         "app.tasks.parsing_tasks",
     ]
 )
 
-logger.info("✅ Celery app configured")
+logger.info("Celery app configured")

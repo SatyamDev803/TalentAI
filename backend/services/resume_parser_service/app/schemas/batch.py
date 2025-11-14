@@ -1,12 +1,9 @@
-"""Batch upload schemas."""
-
 from typing import List, Optional
 from pydantic import BaseModel, Field
 import uuid
 
 
 class BatchUploadResult(BaseModel):
-    """Result for a single file in batch upload."""
 
     filename: str = Field(..., description="Original filename")
     resume_id: Optional[uuid.UUID] = Field(None, description="Created resume ID")
@@ -19,7 +16,6 @@ class BatchUploadResult(BaseModel):
 
 
 class BatchUploadResponse(BaseModel):
-    """Response for batch upload operation."""
 
     total_files: int = Field(..., description="Total files received")
     uploaded: int = Field(..., description="Successfully uploaded count")

@@ -1,8 +1,10 @@
 from typing import List
 
-from common.logger import logger
+from common.logging import get_logger
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+
+logger = get_logger(__name__)
 
 
 class EmbeddingService:

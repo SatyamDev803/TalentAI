@@ -1,34 +1,38 @@
+from pathlib import Path
+import sys
+from pydantic import Field
+
+
+shared_dir = Path(__file__).resolve().parent.parent.parent.parent.parent / "shared"
+if str(shared_dir) not in sys.path:
+    sys.path.insert(0, str(shared_dir))
+
 from common.config import BaseConfig
-from pydantic import ConfigDict, Field
 
 
 class JobServiceConfig(BaseConfig):
-    model_config = ConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-    )
 
-    jwt_secret: str = Field(
-        default="change-me-in-production-use-strong-secret",
-        alias="JWT_SECRET",
-    )
-    jwt_algorithm: str = Field(
-        default="HS256",
-        alias="JWT_ALGORITHM",
-    )
-    access_token_expire_minutes: int = Field(
-        default=15,
-        alias="ACCESS_TOKEN_EXPIRE_MINUTES",
-    )
-    refresh_token_expire_days: int = Field(
-        default=7,
-        alias="REFRESH_TOKEN_EXPIRE_DAYS",
-    )
+    mongodb_host: str = Field(default="localhost", alias="MONGODB_HOST")
+    mongodb_port: int = Field(default=27017, alias="MONGODB_PORT")
+    mongodb_user: str = Field(default="root", alias="MONGODB_USER")
+    mongodb_password: str = Field(default="root", alias="MONGODB_PASSWORD")
+    mongodb_db: str = Field(default="talentai_jobs", alias="MONGODB_DB")
 
-    # Password Configuration
-    password_min_length: int = 8
-    password_max_length: int = 100
+    @property
+    def mongodb_url(self) -> str:
+        return (
+            f"mongodb://{self.mongodb_user}:{self.mongodb_password}@"
+            f"{self.mongodb_host}:{self.mongodb_port}/{self.mongodb_db}"
+            "?authSource=admin"
+        )
 
-    # Redis Configuration for Token Blacklist
-    redis_token_blacklist_prefix: str = "token_blacklist:"
-    redis_refresh_token_prefix: str = "refresh_token:"
+    @property
+    def service_port(self) -> int:
+        return self.job_service_port
+
+    @property
+    def service_name(self) -> str:
+        return "Job Service"
+
+
+settings = JobServiceConfig()

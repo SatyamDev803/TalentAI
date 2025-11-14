@@ -1,35 +1,16 @@
-"""Authentication proxy endpoints."""
-
 from fastapi import APIRouter, Cookie, HTTPException, Response, status
-from pydantic import BaseModel, EmailStr
 from typing import Optional
 import httpx
 
 from app.core.config import settings
+from app.schemas.auth_proxy import LoginRequest, LoginResponse
+
 
 router = APIRouter()
 
 
-class LoginRequest(BaseModel):
-    """Login request schema."""
-
-    email: EmailStr
-    password: str
-
-
-class LoginResponse(BaseModel):
-    """Login response schema."""
-
-    message: str
-    user: dict
-
-
 @router.post("/login", response_model=LoginResponse)
 async def login(credentials: LoginRequest, response: Response):
-    """Login via Auth Service and set cookie.
-
-    This proxies the login request to the Auth Service and forwards the cookie.
-    """
     async with httpx.AsyncClient(follow_redirects=True) as client:
         try:
             # Call Auth Service
@@ -73,14 +54,12 @@ async def login(credentials: LoginRequest, response: Response):
 
 @router.post("/logout")
 async def logout(response: Response):
-    """Logout and clear cookie."""
     response.delete_cookie("access_token")
     return {"message": "Logged out successfully"}
 
 
 @router.get("/me")
 async def get_current_user(access_token: Optional[str] = Cookie(None)):
-    """Get current user info from cookie."""
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"

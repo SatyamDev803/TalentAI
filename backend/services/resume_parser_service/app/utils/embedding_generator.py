@@ -1,5 +1,3 @@
-"""Generate embeddings for semantic resume search with enhanced caching."""
-
 import logging
 import os
 import threading
@@ -13,76 +11,64 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ✅ Disable tokenizers parallelism warning
+# Disable tokenizers parallelism warning
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-# ✅ Thread-safe model cache
+# Thread safe model cache
 _embedding_model: Optional[SentenceTransformer] = None
 _model_lock = threading.Lock()
 _model_load_time: Optional[float] = None
 
 
 def get_embedding_model() -> SentenceTransformer:
-    """Get or initialize the embedding model (thread-safe with caching)."""
     global _embedding_model, _model_load_time
 
-    # ✅ Fast path: model already cached
     if _embedding_model is not None:
         return _embedding_model
 
-    # ✅ Thread-safe loading
+    # Thread safe loading
     with _model_lock:
-        # Double-check after acquiring lock
         if _embedding_model is not None:
             return _embedding_model
 
-        logger.info(
-            f"🔄 Loading embedding model: {settings.sentence_transformer_model}"
-        )
+        logger.info(f"Loading embedding model: {settings.sentence_transformer_model}")
         start_time = time.time()
 
         try:
             _embedding_model = SentenceTransformer(
                 settings.sentence_transformer_model,
-                cache_folder="./model_cache",  # ✅ Local cache directory
+                cache_folder="./model_cache",
             )
             _model_load_time = time.time() - start_time
 
             logger.info(
-                f"✅ Embedding model loaded successfully in {_model_load_time:.2f}s"
+                f"Embedding model loaded successfully in {_model_load_time:.2f}s"
             )
-            logger.info(
-                f"📊 Model memory: ~{_get_model_size_mb(_embedding_model):.0f}MB"
-            )
+            logger.info(f"Model memory: ~{_get_model_size_mb(_embedding_model):.0f}MB")
         except Exception as e:
-            logger.error(f"❌ Failed to load embedding model: {e}")
+            logger.error(f"Failed to load embedding model: {e}")
             raise
 
     return _embedding_model
 
 
 def _get_model_size_mb(model: SentenceTransformer) -> float:
-    """Estimate model memory size in MB."""
     try:
-        import torch
-
         total_params = sum(p.numel() for p in model.parameters())
         # Assume float32 (4 bytes per param)
         size_mb = (total_params * 4) / (1024 * 1024)
         return size_mb
-    except:
+    except Exception:
         return 0.0
 
 
 def preload_model():
-    """Preload model at startup (call this in main.py)."""
-    logger.info("🚀 Preloading embedding model at startup...")
+    logger.info("Preloading embedding model at startup...")
     get_embedding_model()
-    logger.info("✅ Model preloaded and cached")
+    logger.info("Model preloaded and cached")
 
 
 def get_cache_info() -> dict:
-    """Get information about cached model."""
     return {
         "is_cached": _embedding_model is not None,
         "model_name": settings.sentence_transformer_model,
@@ -94,14 +80,6 @@ def get_cache_info() -> dict:
 
 
 def generate_resume_embedding(resume_data: dict) -> List[float]:
-    """Generate embedding from resume data.
-
-    Args:
-        resume_data: Parsed resume dictionary
-
-    Returns:
-        Embedding vector as list of floats
-    """
     try:
         text_parts = []
 
@@ -163,13 +141,13 @@ def generate_resume_embedding(resume_data: dict) -> List[float]:
         combined_text = " | ".join(filter(None, text_parts))
 
         if not combined_text:
-            logger.warning("⚠️ No text available for embedding generation")
+            logger.warning("No text available for embedding generation")
             return [0.0] * settings.embedding_dimension
 
-        # ✅ Use cached model
+        # Use cached model
         model = get_embedding_model()
 
-        # Generate embedding (with timing)
+        # Generate embedding
         start_time = time.time()
         embedding = model.encode(combined_text, show_progress_bar=False)
         encode_time = time.time() - start_time
@@ -179,31 +157,22 @@ def generate_resume_embedding(resume_data: dict) -> List[float]:
 
         if len(embedding_list) != settings.embedding_dimension:
             logger.error(
-                f"❌ Embedding dimension mismatch: {len(embedding_list)} != {settings.embedding_dimension}"
+                f"Embedding dimension mismatch: {len(embedding_list)} != {settings.embedding_dimension}"
             )
             return [0.0] * settings.embedding_dimension
 
         logger.info(
-            f"✅ Generated embedding of dimension {len(embedding_list)} "
+            f"Generated embedding of dimension {len(embedding_list)} "
             f"in {encode_time:.3f}s"
         )
         return embedding_list
 
     except Exception as e:
-        logger.error(f"❌ Error generating embedding: {e}", exc_info=True)
+        logger.error(f"Error generating embedding: {e}", exc_info=True)
         return [0.0] * settings.embedding_dimension
 
 
 def calculate_similarity(embedding1: List[float], embedding2: List[float]) -> float:
-    """Calculate cosine similarity between two embeddings.
-
-    Args:
-        embedding1: First embedding vector
-        embedding2: Second embedding vector
-
-    Returns:
-        Similarity score between 0 and 1
-    """
     try:
         vec1 = np.array(embedding1)
         vec2 = np.array(embedding2)
@@ -224,7 +193,7 @@ def calculate_similarity(embedding1: List[float], embedding2: List[float]) -> fl
         return similarity
 
     except Exception as e:
-        logger.error(f"❌ Error calculating similarity: {e}")
+        logger.error(f"Error calculating similarity: {e}")
         return 0.0
 
 
@@ -234,17 +203,6 @@ def search_similar_resumes(
     top_k: int = 10,
     min_score: float = 0.5,
 ) -> List[tuple[str, float]]:
-    """Search for similar resumes based on embedding.
-
-    Args:
-        query_embedding: Query embedding vector
-        resume_embeddings: List of (resume_id, embedding) tuples
-        top_k: Number of results to return
-        min_score: Minimum similarity score
-
-    Returns:
-        List of (resume_id, similarity_score) tuples, sorted by score
-    """
     similarities = []
 
     for resume_id, embedding in resume_embeddings:

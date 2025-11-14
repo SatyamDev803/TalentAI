@@ -1,10 +1,14 @@
 from common.exceptions import ValidationError
-from common.logger import logger
+from common.logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import get_category_service, get_current_active_user, require_role
 from app.schemas.category import CategoryCreate, CategoryListResponse, CategoryRead
 from app.services.category_service import CategoryService
+
+
+logger = get_logger(__name__)
+
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 

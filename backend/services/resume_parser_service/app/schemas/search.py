@@ -1,13 +1,10 @@
-"""Search-related Pydantic schemas."""
-
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
 
-from app.schemas.resume import ResumeResponse
+from app.schemas.resume import ResumeRead
 
 
 class SearchMetadata(BaseModel):
-    """Metadata about the search operation."""
 
     total_results: int = Field(..., description="Total number of results found")
     query: str = Field(..., description="Original search query")
@@ -17,7 +14,6 @@ class SearchMetadata(BaseModel):
 
 
 class MatchReason(BaseModel):
-    """Explanation for why a resume matched."""
 
     category: str = Field(
         ..., description="Category of match (skills, experience, etc)"
@@ -27,9 +23,8 @@ class MatchReason(BaseModel):
 
 
 class ResumeSearchResult(BaseModel):
-    """Single resume search result with scoring."""
 
-    resume: ResumeResponse = Field(..., description="Resume details")
+    resume: ResumeRead = Field(..., description="Resume details")
     similarity_score: float = Field(
         ..., ge=0.0, le=1.0, description="Cosine similarity score"
     )
@@ -43,7 +38,6 @@ class ResumeSearchResult(BaseModel):
 
 
 class EnhancedSearchResponse(BaseModel):
-    """Enhanced search response with scores and metadata."""
 
     results: List[ResumeSearchResult] = Field(
         default_factory=list, description="Search results"

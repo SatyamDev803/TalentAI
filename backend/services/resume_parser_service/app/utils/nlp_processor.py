@@ -1,6 +1,3 @@
-"""NLP processing utilities using spaCy."""
-
-import logging
 import re
 from typing import Optional
 
@@ -8,20 +5,17 @@ import spacy
 from spacy.language import Language
 
 from app.core.config import settings
+from common.logging import get_logger
 from app.utils.skill_extractor import extract_skills
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__)
 
 # Global spaCy model instance (loaded once)
 _nlp_model: Optional[Language] = None
 
 
 def load_spacy_model() -> Language:
-    """Load spaCy model (singleton pattern).
-
-    Returns:
-        Loaded spaCy Language model
-    """
     global _nlp_model
 
     if _nlp_model is None:
@@ -37,21 +31,14 @@ def load_spacy_model() -> Language:
 
 
 def extract_entities(text: str) -> dict:
-    """Extract named entities from text.
 
-    Args:
-        text: Input text
-
-    Returns:
-        Dictionary of extracted entities
-    """
     nlp = load_spacy_model()
     doc = nlp(text)
 
     entities = {
         "PERSON": [],
         "ORG": [],
-        "GPE": [],  # Geo-Political Entity (locations)
+        "GPE": [],  # Geo Political Entity locations
         "DATE": [],
         "MONEY": [],
         "PERCENT": [],
@@ -76,15 +63,8 @@ def extract_entities(text: str) -> dict:
 
 
 def extract_name(text: str) -> Optional[str]:
-    """Extract person name from resume text.
 
-    Args:
-        text: Resume text
-
-    Returns:
-        Extracted name or None
-    """
-    # Strategy 1: Use first line heuristic (most reliable for resumes)
+    # Strategy 1 Use first line heuristic
     lines = text.strip().split("\n")
 
     for line in lines[:5]:  # Check first 5 lines
@@ -98,9 +78,9 @@ def extract_name(text: str) -> Optional[str]:
         words = line.split()
 
         # Name heuristics:
-        # - 2-4 words
-        # - All words capitalized
-        # - No common resume keywords
+        # 2-4 words
+        # All words capitalized
+        # No common resume keywords
         resume_keywords = [
             "resume",
             "cv",
@@ -130,7 +110,7 @@ def extract_name(text: str) -> Optional[str]:
             if is_name:
                 return line
 
-    # Strategy 2: Use spaCy NER
+    # Strategy 2 Use spaCy NER
     entities = extract_entities(text)
 
     if entities["PERSON"]:
@@ -145,14 +125,7 @@ def extract_name(text: str) -> Optional[str]:
 
 
 def extract_email(text: str) -> Optional[str]:
-    """Extract email address from text.
 
-    Args:
-        text: Input text
-
-    Returns:
-        First email found or None
-    """
     email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
     matches = re.findall(email_pattern, text)
 
@@ -163,15 +136,7 @@ def extract_email(text: str) -> Optional[str]:
 
 
 def extract_phone(text: str) -> Optional[str]:
-    """Extract phone number from text.
 
-    Args:
-        text: Input text
-
-    Returns:
-        First phone number found or None
-    """
-    # Common phone patterns
     patterns = [
         r"\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}",
         r"\(\d{3}\)\s*\d{3}-\d{4}",
@@ -192,15 +157,10 @@ def extract_phone(text: str) -> Optional[str]:
 
 
 def extract_location(text: str) -> Optional[str]:
-    """Extract location from resume with improved parsing.
 
-    Looks for location patterns in the header section.
-    Avoids extracting section headers or education details.
-    """
-    # Only look in first 600 characters (header section)
     header = text[:600]
 
-    # Pattern 1: Look for "Location: City, Country" format
+    # Pattern 1 Look for "Location: City, Country" format
     location_pattern = (
         r"(?:Location|Address|Based in):\s*([A-Z][a-zA-Z\s]+,\s*[A-Z][a-zA-Z\s]+)"
     )
@@ -211,7 +171,7 @@ def extract_location(text: str) -> Optional[str]:
         if location.lower() not in ["education", "experience", "projects", "skills"]:
             return location
 
-    # Pattern 2: After email, look for City, Country
+    # Pattern 2 After email, look for City, Country
     email_pattern = r"@[a-z0-9.-]+\.[a-z]{2,}"
     email_match = re.search(email_pattern, header.lower())
 
@@ -240,7 +200,7 @@ def extract_location(text: str) -> Optional[str]:
             if not any(term in city.lower() for term in invalid_terms):
                 return f"{city}, {country}"
 
-    # Pattern 3: Common country names in header
+    # Pattern 3 Common country names in header
     countries = [
         "India",
         "USA",
@@ -270,14 +230,7 @@ def extract_location(text: str) -> Optional[str]:
 
 
 def extract_education(text: str) -> list[dict]:
-    """Extract education information with improved parsing.
 
-    Args:
-        text: Resume text
-
-    Returns:
-        List of education entries
-    """
     education = []
 
     # Find Education section
@@ -358,25 +311,17 @@ def extract_education(text: str) -> list[dict]:
             }
         )
 
-    logger.info(f"✅ Extracted {len(education)} education entries")
+    logger.info(f"Extracted {len(education)} education entries")
     return education
 
 
 def extract_experience(text: str) -> list[dict]:
-    """Extract work experience from text.
 
-    Args:
-        text: Resume text
-
-    Returns:
-        List of experience entries
-    """
     nlp = load_spacy_model()
     doc = nlp(text)
 
     experience = []
 
-    # Job title keywords (common titles)
     job_titles = [
         "engineer",
         "developer",
@@ -397,7 +342,7 @@ def extract_experience(text: str) -> list[dict]:
     # Extract organizations
     orgs = [ent.text for ent in doc.ents if ent.label_ == "ORG"]
 
-    # Simple heuristic: lines with job titles near organizations
+    # Simple heuristic lines with job titles near organizations
     lines = text.split("\n")
 
     for i, line in enumerate(lines):
@@ -432,14 +377,7 @@ def extract_experience(text: str) -> list[dict]:
 
 
 def calculate_experience_years(experience: list[dict]) -> float:
-    """Calculate total years of experience.
 
-    Args:
-        experience: List of experience entries
-
-    Returns:
-        Total years of experience
-    """
     total_years = 0.0
 
     for exp in experience:
@@ -468,15 +406,7 @@ def calculate_experience_years(experience: list[dict]) -> float:
 
 
 def extract_summary(text: str, max_sentences: int = 3) -> Optional[str]:
-    """Extract summary from resume text.
 
-    Args:
-        text: Resume text
-        max_sentences: Maximum number of sentences
-
-    Returns:
-        Extracted summary or None
-    """
     nlp = load_spacy_model()
     doc = nlp(text)
 
@@ -491,17 +421,8 @@ def extract_summary(text: str, max_sentences: int = 3) -> Optional[str]:
 
 
 def extract_resume_data(text: str) -> dict:
-    """Extract all resume data from text.
 
-    This is the main function that combines all extraction functions.
-
-    Args:
-        text: Raw resume text
-
-    Returns:
-        Dictionary containing all extracted resume data
-    """
-    logger.info("🧠 Extracting resume data using NLP...")
+    logger.info("Extracting resume data using NLP...")
 
     # Extract individual components
     full_name = extract_name(text)
@@ -514,9 +435,8 @@ def extract_resume_data(text: str) -> dict:
     # Calculate total experience
     total_experience_years = calculate_experience_years(experience)
 
-    # Extract skills (import from skill_extractor)
+    # Extract skills
     try:
-        from app.utils.skill_extractor import extract_skills
 
         skills = extract_skills(text)  # Returns Dict[str, List[str]]
 
@@ -527,7 +447,7 @@ def extract_resume_data(text: str) -> dict:
                 all_skills.extend(category_skills)
 
         logger.info(
-            f"✅ Extracted {len(all_skills)} skills across {len(skills)} categories"
+            f"Extracted {len(all_skills)} skills across {len(skills)} categories"
         )
 
     except Exception as e:
@@ -550,7 +470,7 @@ def extract_resume_data(text: str) -> dict:
     }
 
     logger.info(
-        f"✅ Resume data extracted: "
+        f"Resume data extracted: "
         f"Name={full_name}, "
         f"Email={email}, "
         f"Skills={len(all_skills)}, "

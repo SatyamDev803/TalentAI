@@ -1,21 +1,12 @@
-"""File hashing utilities for duplicate detection."""
-
 import hashlib
 import logging
 from pathlib import Path
+from typing import Union
 
 logger = logging.getLogger(__name__)
 
 
-def calculate_file_hash(file_path: str | Path) -> str:
-    """Calculate SHA-256 hash of file content.
-
-    Args:
-        file_path: Path to file
-
-    Returns:
-        Hexadecimal hash string
-    """
+def calculate_file_hash_from_path(file_path: Union[str, Path]) -> str:
     try:
         file_path = Path(file_path)
 
@@ -31,29 +22,32 @@ def calculate_file_hash(file_path: str | Path) -> str:
                 sha256_hash.update(byte_block)
 
         file_hash = sha256_hash.hexdigest()
-        logger.info(f"✅ Calculated file hash: {file_hash[:16]}...")
+        logger.info(f"Calculated file hash: {file_hash[:16]}...")
 
         return file_hash
 
     except Exception as e:
-        logger.error(f"❌ Error calculating file hash: {e}")
+        logger.error(f"Error calculating file hash: {e}")
         return ""
 
 
-def calculate_bytes_hash(file_bytes: bytes) -> str:
-    """Calculate SHA-256 hash of file bytes.
+def calculate_file_hash_from_bytes(file_bytes: bytes) -> str:
 
-    Args:
-        file_bytes: File content as bytes
-
-    Returns:
-        Hexadecimal hash string
-    """
     try:
+        if not file_bytes:
+            logger.warning("Empty file bytes provided")
+            return ""
+
         file_hash = hashlib.sha256(file_bytes).hexdigest()
-        logger.info(f"✅ Calculated bytes hash: {file_hash[:16]}...")
+        logger.info(f"Calculated bytes hash: {file_hash[:16]}...")
+
         return file_hash
 
     except Exception as e:
-        logger.error(f"❌ Error calculating bytes hash: {e}")
+        logger.error(f"Error calculating bytes hash: {e}")
         return ""
+
+
+# backward compatibility
+def calculate_file_hash(file_path: Union[str, Path]) -> str:
+    return calculate_file_hash_from_path(file_path)

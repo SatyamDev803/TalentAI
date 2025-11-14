@@ -102,7 +102,7 @@ class BaseConfig(BaseSettings):
     upload_dir: str = Field(default="./uploads/resumes", alias="UPLOAD_DIR")
 
     # ML Models
-    spacy_model: str = Field(default="en_core_web_sm", alias="SPACY_MODEL")
+    spacy_model: str = Field(default="en_core_web_md", alias="SPACY_MODEL")
     sentence_transformer_model: str = Field(
         default="all-MiniLM-L6-v2", alias="SENTENCE_TRANSFORMER_MODEL"
     )
@@ -226,12 +226,10 @@ class BaseConfig(BaseSettings):
     # Computed Properties
     @property
     def cors_origins_list(self) -> list[str]:
-        """Convert CORS_ORIGINS string to list."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
 
     @property
     def database_url(self) -> str:
-        """PostgreSQL connection URL for main database."""
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -239,7 +237,6 @@ class BaseConfig(BaseSettings):
 
     @property
     def database_url_resume(self) -> str:
-        """PostgreSQL connection URL for resume parser database."""
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db_resume_parser}"
@@ -247,7 +244,6 @@ class BaseConfig(BaseSettings):
 
     @property
     def mongodb_url(self) -> str:
-        """MongoDB connection URL."""
         return (
             f"mongodb://{self.mongodb_user}:{self.mongodb_password}"
             f"@{self.mongodb_host}:{self.mongodb_port}/{self.mongodb_db}"
@@ -255,27 +251,22 @@ class BaseConfig(BaseSettings):
 
     @property
     def redis_url(self) -> str:
-        """Redis connection URL."""
         if self.redis_password:
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     @property
     def is_production(self) -> bool:
-        """Check if running in production."""
         return self.environment == "production"
 
     @property
     def is_development(self) -> bool:
-        """Check if running in development."""
         return self.environment in ("development", "local")
 
     @property
     def allowed_extensions_list(self) -> list[str]:
-        """Get allowed file extensions as a list."""
         return [ext.strip() for ext in self.allowed_extensions.split(",")]
 
     @property
     def llm_provider_priority_list(self) -> list[str]:
-        """Get LLM provider priority as a list."""
         return [provider.strip() for provider in self.llm_provider_priority.split(",")]

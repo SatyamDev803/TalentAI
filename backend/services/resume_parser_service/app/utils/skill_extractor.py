@@ -1,17 +1,15 @@
-"""Enhanced skill extraction with categorization."""
-
-import logging
 import re
 from collections import defaultdict
 from typing import Dict, List, Set
 
 import spacy
 
-logger = logging.getLogger(__name__)
+from common.logging import get_logger
 
-# Load spaCy model once
+logger = get_logger(__name__)
+
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_md")
 except OSError:
     logger.warning(
         "spaCy model not found. Run: python -m spacy download en_core_web_sm"
@@ -138,14 +136,7 @@ SKILL_DATABASE = {
 
 
 def extract_skills(text: str) -> Dict[str, List[str]]:
-    """Extract and categorize skills from resume text.
 
-    Args:
-        text: Resume text
-
-    Returns:
-        Dictionary of categorized skills
-    """
     found_skills = defaultdict(set)
     text_lower = text.lower()
 
@@ -180,14 +171,13 @@ def extract_skills(text: str) -> Dict[str, List[str]]:
 def enhance_with_nlp(
     text: str, existing_skills: Dict[str, Set[str]]
 ) -> Dict[str, Set[str]]:
-    """Use NLP to find additional technical terms."""
     doc = nlp(text)
 
     # Extract noun chunks that might be skills
     for chunk in doc.noun_chunks:
         chunk_text = chunk.text
 
-        # Check if it's a potential skill (2-3 words, contains technical terms)
+        # Check if it's a potential skill
         if 2 <= len(chunk_text.split()) <= 3:
             # Check against known skills
             for category, skills in SKILL_DATABASE.items():
@@ -199,7 +189,6 @@ def enhance_with_nlp(
 
 
 def get_skill_summary(categorized_skills: Dict[str, List[str]]) -> dict:
-    """Generate skill summary statistics."""
     return {
         "total_skills": sum(len(skills) for skills in categorized_skills.values()),
         "categories": len(categorized_skills),

@@ -1,12 +1,9 @@
-"""Test search endpoints."""
-
 import pytest
 from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
 async def test_semantic_search(client: AsyncClient, auth_headers):
-    """Test semantic search endpoint with correct response schema."""
     response = await client.get(
         "/api/v1/search/semantic",
         params={
@@ -20,7 +17,7 @@ async def test_semantic_search(client: AsyncClient, auth_headers):
     assert response.status_code == 200
     data = response.json()
 
-    # ✅ FIXED: Check correct response schema
+    # Check correct response schema
     assert "results" in data
     assert "metadata" in data
     assert isinstance(data["results"], list)
@@ -40,7 +37,6 @@ async def test_semantic_search(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_skill_search_any(client: AsyncClient, auth_headers):
-    """Test skill search with ANY logic."""
     response = await client.get(
         "/api/v1/search/skills",
         params={"skills": "Python,Java", "match_all": False},
@@ -54,7 +50,6 @@ async def test_skill_search_any(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_skill_search_all(client: AsyncClient, auth_headers):
-    """Test skill search with ALL logic."""
     response = await client.get(
         "/api/v1/search/skills",
         params={"skills": "Python,Docker", "match_all": True},
@@ -68,7 +63,6 @@ async def test_skill_search_all(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_semantic_search_no_results(client: AsyncClient, auth_headers):
-    """Test semantic search with high threshold (no results)."""
     response = await client.get(
         "/api/v1/search/semantic",
         params={
@@ -88,7 +82,6 @@ async def test_semantic_search_no_results(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_semantic_search_validation(client: AsyncClient, auth_headers):
-    """Test semantic search parameter validation."""
     # Test invalid top_k
     response = await client.get(
         "/api/v1/search/semantic",
@@ -108,7 +101,6 @@ async def test_semantic_search_validation(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_export_search_results_csv(client: AsyncClient, auth_headers):
-    """Test export search results as CSV."""
     response = await client.get(
         "/api/v1/search/export",
         params={
@@ -127,7 +119,6 @@ async def test_export_search_results_csv(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_export_search_results_json(client: AsyncClient, auth_headers):
-    """Test export search results as JSON."""
     response = await client.get(
         "/api/v1/search/export",
         params={

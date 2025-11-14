@@ -2,12 +2,14 @@ import uuid
 from typing import Optional
 
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.skill import Skill
 from app.schemas.skill import SkillCreate
+
+logger = get_logger(__name__)
 
 
 class SkillService:

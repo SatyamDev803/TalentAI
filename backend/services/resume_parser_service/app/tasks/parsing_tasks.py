@@ -1,5 +1,3 @@
-"""Celery tasks for resume parsing - FIXED FOR MULTIPROCESSING."""
-
 import logging
 import uuid
 from pathlib import Path
@@ -12,10 +10,12 @@ from app.core.config import settings
 from app.models.resume import Resume
 from app.utils.file_parser import parse_file
 from app.utils.embedding_generator import generate_resume_embedding
+from app.utils.nlp_processor import extract_resume_data
+
 
 logger = logging.getLogger(__name__)
 
-# ✅ CREATE SYNC DATABASE SESSION FOR CELERY
+# Sync database session for celery
 sync_database_url = settings.database_url_resume.replace(
     "postgresql+asyncpg://", "postgresql+psycopg2://"
 )
@@ -31,8 +31,7 @@ SessionLocal = sessionmaker(
 
 @celery_app.task(name="parse_resume_async", bind=True, max_retries=3)
 def parse_resume_async(self, resume_id: str):
-    """Parse a resume asynchronously."""
-    logger.info(f"🔄 [Task {self.request.id}] Parsing resume: {resume_id}")
+    logger.info(f"[Task {self.request.id}] Parsing resume: {resume_id}")
 
     db = SessionLocal()
 
@@ -42,30 +41,27 @@ def parse_resume_async(self, resume_id: str):
         resume = result.scalar_one_or_none()
 
         if not resume:
-            logger.error(f"❌ Resume not found: {resume_id}")
+            logger.error(f"Resume not found: {resume_id}")
             return {"status": "error", "error": "Resume not found"}
 
-        # ✅ FIXED: Get file path (database already has "uploads/" prefix)
+        # Get file path
         base_dir = Path(__file__).resolve().parent.parent.parent
-        file_path = base_dir / resume.file_path  # ← No "uploads/" added here!
+        file_path = base_dir / resume.file_path
 
         if not file_path.exists():
-            logger.error(f"❌ File not found: {file_path}")
+            logger.error(f"File not found: {file_path}")
             return {"status": "error", "error": "File not found"}
 
         # Parse file
-        logger.info(f"📄 Parsing file: {file_path}")
+        logger.info(f"Parsing file: {file_path}")
         raw_text = parse_file(file_path, resume.file_type)
 
-        # Import and call extract_resume_data INSIDE task
-        from app.utils.nlp_processor import extract_resume_data
-
         # Extract data using NLP
-        logger.info(f"🧠 Extracting resume data...")
+        logger.info("Extracting resume data...")
         resume_data = extract_resume_data(raw_text)
 
         # Generate embedding
-        logger.info(f"🔢 Generating embedding...")
+        logger.info("Generating embedding...")
         embedding = generate_resume_embedding(resume_data)
 
         # Update resume
@@ -88,9 +84,7 @@ def parse_resume_async(self, resume_id: str):
 
         db.commit()
 
-        logger.info(
-            f"✅ [Task {self.request.id}] Resume parsed successfully: {resume_id}"
-        )
+        logger.info(f"[Task {self.request.id}] Resume parsed successfully: {resume_id}")
 
         return {
             "status": "success",
@@ -101,7 +95,7 @@ def parse_resume_async(self, resume_id: str):
 
     except Exception as e:
         logger.error(
-            f"❌ [Task {self.request.id}] Error parsing resume: {str(e)}", exc_info=True
+            f"[Task {self.request.id}] Error parsing resume: {str(e)}", exc_info=True
         )
         db.rollback()
 
@@ -114,15 +108,7 @@ def parse_resume_async(self, resume_id: str):
 
 @celery_app.task(name="batch_parse_resumes_async")
 def batch_parse_resumes_async(resume_ids: list[str]):
-    """Parse multiple resumes asynchronously.
-
-    Args:
-        resume_ids: List of resume UUIDs to parse
-
-    Returns:
-        dict: Batch parsing result
-    """
-    logger.info(f"📦 Batch parsing {len(resume_ids)} resumes...")
+    logger.info(f"Batch parsing {len(resume_ids)} resumes...")
 
     # Queue individual tasks
     tasks = []

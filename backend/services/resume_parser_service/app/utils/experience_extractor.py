@@ -1,5 +1,3 @@
-"""Improved experience extraction from resumes."""
-
 import logging
 import re
 from dataclasses import dataclass
@@ -11,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class WorkExperience:
-    """Structured work experience."""
-
     title: str
     company: str
     location: Optional[str] = None
@@ -28,14 +24,7 @@ class WorkExperience:
 
 
 def extract_experiences(text: str) -> List[dict]:
-    """Extract work experiences with improved parsing.
 
-    Args:
-        text: Resume text
-
-    Returns:
-        List of experience dictionaries
-    """
     experiences = []
 
     # Find Experience section
@@ -49,8 +38,7 @@ def extract_experiences(text: str) -> List[dict]:
 
     experience_section = match.group(2)
 
-    # Pattern: Job Title, Date Range (on same or next line), Company, Location
-    # Example: "ML Intern Dec 2024 – May 2025\nKredit (Startup) Remote"
+    # Pattern: Job Title, Date Range, Company, Location
 
     # Split by double newlines or significant gaps
     job_blocks = re.split(r"\n\s*\n", experience_section)
@@ -64,7 +52,6 @@ def extract_experiences(text: str) -> List[dict]:
         if len(lines) < 2:
             continue
 
-        # First line: Usually title + date range
         first_line = lines[0]
 
         # Extract date range from first line
@@ -74,20 +61,17 @@ def extract_experiences(text: str) -> List[dict]:
         if not date_match:
             continue
 
-        # Extract title (everything before date)
         title = first_line[: date_match.start()].strip()
         start_date = date_match.group(1)
         end_date = date_match.group(2)
         is_current = end_date.lower() in ["present", "current"]
 
-        # Second line: Usually company + location
         second_line = lines[1] if len(lines) > 1 else ""
 
         # Try to split company and location
-        # Pattern: "Company Name Location" or "Company (Type) Location"
         company_location = second_line
 
-        # Extract location (common patterns: Remote, City Name, State, Country)
+        # Extract location
         location_pattern = (
             r"\b(Remote|Hybrid|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?(?:,\s*[A-Z]{2,})?)$"
         )
@@ -100,18 +84,18 @@ def extract_experiences(text: str) -> List[dict]:
             company = company_location
             location = None
 
-        # Clean company name (remove parentheses content if it's just description)
+        # Clean company name
         company = re.sub(r"\s*\([^)]*\)\s*$", "", company).strip()
 
         # Calculate duration
         duration = calculate_duration(start_date, end_date, is_current)
 
-        # Extract bullet points (lines starting with – or -)
+        # Extract bullet points
         description = []
         for line in lines[2:]:
             if line.startswith(("–", "-", "•", "*")):
                 desc = line.lstrip("–-•*").strip()
-                if len(desc) > 20:  # Only meaningful descriptions
+                if len(desc) > 20:
                     description.append(desc)
 
         exp = WorkExperience(
@@ -122,7 +106,7 @@ def extract_experiences(text: str) -> List[dict]:
             end_date=end_date if not is_current else "Present",
             duration_months=duration,
             is_current=is_current,
-            description=description[:5],  # Limit to 5 points
+            description=description[:5],
         )
 
         experiences.append(
@@ -138,23 +122,13 @@ def extract_experiences(text: str) -> List[dict]:
             }
         )
 
-    logger.info(f"✅ Extracted {len(experiences)} work experiences")
+    logger.info(f"Extracted {len(experiences)} work experiences")
     return experiences
 
 
 def calculate_duration(
     start_date: str, end_date: str, is_current: bool
 ) -> Optional[int]:
-    """Calculate duration in months between two dates.
-
-    Args:
-        start_date: Start date string (e.g., "Dec 2024")
-        end_date: End date string (e.g., "May 2025" or "Present")
-        is_current: Whether the position is current
-
-    Returns:
-        Duration in months
-    """
     try:
         # Parse start date
         start = datetime.strptime(start_date, "%b %Y")
@@ -175,14 +149,6 @@ def calculate_duration(
 
 
 def calculate_total_experience_years(experiences: List[dict]) -> float:
-    """Calculate total years of experience.
-
-    Args:
-        experiences: List of experience dictionaries
-
-    Returns:
-        Total years of experience
-    """
     total_months = 0
 
     for exp in experiences:
@@ -191,5 +157,5 @@ def calculate_total_experience_years(experiences: List[dict]) -> float:
 
     total_years = total_months / 12.0
 
-    logger.info(f"✅ Total experience: {total_years:.1f} years ({total_months} months)")
+    logger.info(f"Total experience: {total_years:.1f} years ({total_months} months)")
     return round(total_years, 1)

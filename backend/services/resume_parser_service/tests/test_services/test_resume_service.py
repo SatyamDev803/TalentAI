@@ -1,5 +1,3 @@
-"""Tests for Resume Service."""
-
 import uuid
 import pytest
 from app.schemas.resume import ResumeCreate
@@ -8,13 +6,11 @@ from app.services.resume_service import ResumeService
 
 @pytest.fixture
 async def resume_service(db_session):
-    """Create resume service instance."""
     return ResumeService(db_session)
 
 
 @pytest.fixture
 def sample_resume_data(test_user_id):
-    """Sample resume creation data."""
     return ResumeCreate(
         user_id=test_user_id,
         filename="test_resume.pdf",
@@ -26,7 +22,6 @@ def sample_resume_data(test_user_id):
 
 @pytest.mark.asyncio
 async def test_create_resume(resume_service, sample_resume_data):
-    """Test creating a resume."""
     resume = await resume_service.create_resume(sample_resume_data)
 
     assert resume.id is not None
@@ -39,7 +34,6 @@ async def test_create_resume(resume_service, sample_resume_data):
 
 @pytest.mark.asyncio
 async def test_get_resume_by_id(resume_service, sample_resume_data):
-    """Test getting resume by ID."""
     # Create resume
     created_resume = await resume_service.create_resume(sample_resume_data)
 
@@ -53,14 +47,12 @@ async def test_get_resume_by_id(resume_service, sample_resume_data):
 
 @pytest.mark.asyncio
 async def test_get_resume_by_id_not_found(resume_service):
-    """Test getting non-existent resume."""
     resume = await resume_service.get_resume_by_id(uuid.uuid4())
     assert resume is None
 
 
 @pytest.mark.asyncio
 async def test_get_resumes_by_user(resume_service, sample_resume_data, test_user_id):
-    """Test getting user's resumes."""
     # Create multiple resumes
     await resume_service.create_resume(sample_resume_data)
     await resume_service.create_resume(
@@ -82,7 +74,6 @@ async def test_get_resumes_by_user(resume_service, sample_resume_data, test_user
 
 @pytest.mark.asyncio
 async def test_count_resumes(resume_service, sample_resume_data, test_user_id):
-    """Test counting user's resumes."""
     # Initially 0
     count = await resume_service.count_resumes(test_user_id)
     assert count == 0
@@ -97,7 +88,6 @@ async def test_count_resumes(resume_service, sample_resume_data, test_user_id):
 
 @pytest.mark.asyncio
 async def test_delete_resume_soft(resume_service, sample_resume_data):
-    """Test soft deleting a resume."""
     # Create resume
     resume = await resume_service.create_resume(sample_resume_data)
 
@@ -111,7 +101,6 @@ async def test_delete_resume_soft(resume_service, sample_resume_data):
 
 @pytest.mark.asyncio
 async def test_update_resume(resume_service, sample_resume_data):
-    """Test updating resume information."""
     from app.schemas.resume import ResumeUpdate
 
     # Create resume

@@ -1,71 +1,40 @@
-"""Detect duplicate resume uploads."""
-
-import hashlib
-import logging
 from typing import List, Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume import Resume
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
-
-
-def calculate_file_hash(file_bytes: bytes) -> str:
-    """Calculate SHA-256 hash of file content.
-
-    Args:
-        file_bytes: File content as bytes
-
-    Returns:
-        Hexadecimal hash string
-    """
-    return hashlib.sha256(file_bytes).hexdigest()
+logger = get_logger(__name__)
 
 
 def calculate_text_similarity(text1: str, text2: str) -> float:
-    """Calculate simple text similarity using character overlap.
 
-    Args:
-        text1: First text
-        text2: Second text
-
-    Returns:
-        Similarity score between 0 and 1
-    """
     if not text1 or not text2:
         return 0.0
 
-    # Convert to lowercase and create character sets
-    chars1 = set(text1.lower())
-    chars2 = set(text2.lower())
+    # Convert to lowercase and split into words
+    words1 = set(text1.lower().split())
+    words2 = set(text2.lower().split())
 
-    # Jaccard similarity
-    intersection = len(chars1 & chars2)
-    union = len(chars1 | chars2)
+    # Jaccard similarity: intersection / union
+    intersection = len(words1 & words2)
+    union = len(words1 | words2)
 
     return intersection / union if union > 0 else 0.0
 
 
 async def check_duplicate_by_hash(
-    db: AsyncSession, user_id: str, file_hash: str
+    db: AsyncSession, user_id: UUID, file_hash: str
 ) -> Optional[Resume]:
-    """Check if resume with same file hash exists.
 
-    Args:
-        db: Database session
-        user_id: User ID
-        file_hash: File SHA-256 hash
-
-    Returns:
-        Existing resume or None
-    """
     result = await db.execute(
         select(Resume).where(
             Resume.user_id == user_id,
             Resume.file_hash == file_hash,
-            Resume.is_deleted == False,
+            Resume.is_deleted.is_(False),
         )
     )
 
@@ -73,53 +42,44 @@ async def check_duplicate_by_hash(
 
 
 async def check_duplicate_by_content(
-    db: AsyncSession, user_id: str, raw_text: str, threshold: float = 0.90
+    db: AsyncSession, user_id: UUID, raw_text: str, threshold: float = 0.90
 ) -> Optional[Resume]:
-    """Check if similar resume content exists.
 
-    Args:
-        db: Database session
-        user_id: User ID
-        raw_text: Resume text content
-        threshold: Similarity threshold (0-1)
+    if not raw_text or not raw_text.strip():
+        return None
 
-    Returns:
-        Similar resume or None
-    """
     # Get all user's resumes with text
     result = await db.execute(
         select(Resume).where(
             Resume.user_id == user_id,
             Resume.raw_text.isnot(None),
-            Resume.is_deleted == False,
+            Resume.is_deleted.is_(False),
         )
     )
 
     existing_resumes = result.scalars().all()
 
+    # Compare with each existing resume
     for resume in existing_resumes:
+        if not resume.raw_text:
+            continue
+
         similarity = calculate_text_similarity(raw_text, resume.raw_text)
 
         if similarity >= threshold:
-            logger.info(f"Found duplicate resume (similarity: {similarity:.2f})")
+            logger.info(
+                f"Found duplicate resume for user {user_id} "
+                f"(similarity: {similarity:.2%})"
+            )
             return resume
 
     return None
 
 
 async def find_all_duplicates(
-    db: AsyncSession, user_id: str, resume_id: str
+    db: AsyncSession, user_id: UUID, resume_id: UUID
 ) -> List[Resume]:
-    """Find all potential duplicates of a resume.
 
-    Args:
-        db: Database session
-        user_id: User ID
-        resume_id: Resume to check
-
-    Returns:
-        List of potential duplicate resumes
-    """
     # Get target resume
     result = await db.execute(
         select(Resume).where(Resume.id == resume_id, Resume.user_id == user_id)
@@ -127,36 +87,57 @@ async def find_all_duplicates(
 
     target_resume = result.scalar_one_or_none()
 
-    if not target_resume or not target_resume.raw_text:
+    if not target_resume:
+        logger.warning(f"Resume {resume_id} not found")
         return []
 
-    # Check against all other resumes
-    duplicates = []
+    if not target_resume.raw_text:
+        logger.warning(f"Resume {resume_id} has no text content")
+        return []
 
+    # Get all other resumes for this user
     result = await db.execute(
         select(Resume).where(
             Resume.user_id == user_id,
             Resume.id != resume_id,
-            Resume.is_deleted == False,
+            Resume.is_deleted.is_(False),
         )
     )
 
     all_resumes = result.scalars().all()
+    duplicates = []
 
+    # Check each resume for duplicates
     for resume in all_resumes:
-        if not resume.raw_text:
-            continue
+        is_duplicate = False
 
-        # Check file hash
-        if target_resume.file_hash and resume.file_hash == target_resume.file_hash:
+        # Check 1: Identical file hash (exact copy)
+        if (
+            target_resume.file_hash
+            and resume.file_hash
+            and target_resume.file_hash == resume.file_hash
+        ):
+            is_duplicate = True
+            logger.info(f"Found duplicate by hash: {resume.id}")
+
+        # Check 2: Similar text content
+        elif resume.raw_text:
+            similarity = calculate_text_similarity(
+                target_resume.raw_text, resume.raw_text
+            )
+
+            if similarity >= 0.85:
+                is_duplicate = True
+                logger.info(
+                    f"Found duplicate by content: {resume.id} "
+                    f"(similarity: {similarity:.2%})"
+                )
+
+        if is_duplicate:
             duplicates.append(resume)
-            continue
 
-        # Check text similarity
-        similarity = calculate_text_similarity(target_resume.raw_text, resume.raw_text)
+    logger.info(
+        f"Found {len(duplicates)} potential duplicates " f"for resume {resume_id}"
+    )
 
-        if similarity >= 0.85:
-            duplicates.append(resume)
-
-    logger.info(f"Found {len(duplicates)} potential duplicates")
     return duplicates

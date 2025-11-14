@@ -1,15 +1,14 @@
-"""Redis cache client for Resume Parser Service."""
-
 import json
 from typing import Any, Optional
 import redis.asyncio as redis
 
 from app.core.config import settings
+from common.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class RedisCache:
-    """Async Redis cache manager."""
-
     def __init__(self):
         self.enabled = (
             settings.enable_cache if hasattr(settings, "enable_cache") else True
@@ -25,9 +24,8 @@ class RedisCache:
         self._client: Optional[redis.Redis] = None
 
     async def initialize(self):
-        """Initialize Redis connection."""
         if not self.enabled:
-            print("⚠️  Redis cache is disabled")
+            logger.info("Redis cache is disabled")
             return
 
         try:
@@ -42,25 +40,22 @@ class RedisCache:
             )
 
             await self._client.ping()
-            print(f"✅ Redis connected: {settings.redis_host}:{settings.redis_port}")
+            logger.info(f"Redis connected: {settings.redis_host}:{settings.redis_port}")
 
         except Exception as e:
-            print(f"❌ Redis connection failed: {e}")
-            print("⚠️  Continuing without cache...")
+            logger.error(f"Redis connection failed: {e}")
+            logger.info("Continuing without cache...")
             self.enabled = False
 
     async def close(self):
-        """Close Redis connection."""
         if self._client:
             await self._client.close()
-            print("✅ Redis connection closed")
+            logger.info("Redis connection closed")
 
     def _make_key(self, key: str) -> str:
-        """Create prefixed cache key."""
         return f"{self.prefix}{key}"
 
     async def get(self, key: str) -> Optional[Any]:
-        """Get value from cache."""
         if not self.enabled or not self._client:
             return None
 
@@ -70,11 +65,10 @@ class RedisCache:
                 return json.loads(cached)
             return None
         except Exception as e:
-            print(f"⚠️  Cache get error: {e}")
+            logger.error(f"Cache get error: {e}")
             return None
 
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in cache with TTL."""
         if not self.enabled or not self._client:
             return False
 
@@ -84,11 +78,10 @@ class RedisCache:
             await self._client.setex(self._make_key(key), ttl, serialized)
             return True
         except Exception as e:
-            print(f"⚠️  Cache set error: {e}")
+            logger.info(f"Cache set error: {e}")
             return False
 
     async def delete(self, key: str) -> bool:
-        """Delete key from cache."""
         if not self.enabled or not self._client:
             return False
 
@@ -96,11 +89,10 @@ class RedisCache:
             await self._client.delete(self._make_key(key))
             return True
         except Exception as e:
-            print(f"⚠️  Cache delete error: {e}")
+            logger.error(f"Cache delete error: {e}")
             return False
 
     async def clear_user_cache(self, user_id: str) -> int:
-        """Clear all cache entries for a user."""
         if not self.enabled or not self._client:
             return 0
 
@@ -112,7 +104,6 @@ class RedisCache:
         return deleted
 
     async def get_stats(self) -> dict:
-        """Get cache statistics."""
         if not self.enabled or not self._client:
             return {"enabled": False}
 
@@ -134,12 +125,10 @@ class RedisCache:
             return {"enabled": True, "error": str(e)}
 
 
-# Global cache instance
 _cache: Optional[RedisCache] = None
 
 
 async def get_cache() -> RedisCache:
-    """Get or create cache instance."""
     global _cache
     if _cache is None:
         _cache = RedisCache()
@@ -148,7 +137,6 @@ async def get_cache() -> RedisCache:
 
 
 async def close_cache():
-    """Close cache connection."""
     global _cache
     if _cache:
         await _cache.close()

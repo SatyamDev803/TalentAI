@@ -1,5 +1,5 @@
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger
 from common.validators import validate_uuid
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
@@ -11,6 +11,8 @@ from app.schemas.application import (
     ApplicationUpdate,
 )
 from app.services.application_service import ApplicationService
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
