@@ -1,8 +1,12 @@
+from typing import Optional
+
+from common.logging import get_logger
 from common.redis_client import redis_client
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Cookie, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import JobServiceConfig
+from app.core.config import settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.services.application_service import ApplicationService
@@ -10,30 +14,50 @@ from app.services.category_service import CategoryService
 from app.services.job_service import JobService
 from app.services.skill_service import SkillService
 
-settings = JobServiceConfig()
+logger = get_logger(__name__)
+
+# Bearer token support
+security = HTTPBearer(auto_error=False)
+
+# Role constants
+ADMIN_ROLES = {"ADMIN", "RECRUITER", "SUPER_ADMIN"}
+COMPANY_ROLES = {"RECRUITER", "COMPANY_ADMIN"}
 
 
-async def get_token_from_cookie(request: Request) -> str:
-    token = request.cookies.get("access_token")
+async def get_token(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    access_token: Optional[str] = Cookie(None, alias="access_token"),
+) -> str:
+    # Try Bearer token first
+    if credentials:
+        logger.debug("Token from Bearer header")
+        return credentials.credentials
 
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+    # Fallback to cookie
+    if access_token:
+        logger.debug("Token from cookie")
+        return access_token
 
-    return token
+    # No token found
+    logger.warning("Authentication attempt without token")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated. Provide token via Bearer header or cookie.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def get_current_user(
-    token: str = Depends(get_token_from_cookie),
+    token: str = Depends(get_token),
 ) -> dict:
     payload = decode_token(token)
 
     if not payload:
+        logger.warning("Invalid or expired token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     user_id = payload.get("sub")
@@ -41,18 +65,24 @@ async def get_current_user(
     jti = payload.get("jti")
 
     if not user_id or token_type != "access":
+        logger.warning(f"Invalid token claims: user_id={user_id}, type={token_type}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token claims",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check blacklist
+    # Check token blacklist
     is_blacklisted = await redis_client.is_token_blacklisted(jti)
     if is_blacklisted:
+        logger.warning(f"Blacklisted token used: jti={jti}, user={user_id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token revoked",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    logger.debug(f"User authenticated: {user_id}")
 
     return {
         "id": user_id,
@@ -72,12 +102,13 @@ async def get_current_active_user(
 
 
 def require_role(*roles: str):
-    # Require specific roles
-
     async def check_role(current_user: dict = Depends(get_current_active_user)) -> dict:
-        # Check if user has required role
         user_role = current_user.get("role")
         if user_role not in roles:
+            logger.warning(
+                f"Role check failed: user={current_user.get('id')}, "
+                f"has={user_role}, required={roles}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"User role '{user_role}' is not authorized. Required: {roles}",
@@ -97,6 +128,9 @@ async def require_company_member(
     current_user: dict = Depends(get_current_active_user),
 ) -> dict:
     if not current_user.get("company_id"):
+        logger.warning(
+            f"Non-company user attempted company action: {current_user.get('id')}"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User must be part of a company to perform this action",
@@ -108,13 +142,20 @@ async def require_company_admin(
     current_user: dict = Depends(get_current_active_user),
 ) -> dict:
     user_role = current_user.get("role")
-    if user_role not in ("ADMIN", "RECRUITER"):
+
+    if user_role not in ADMIN_ROLES:
+        logger.warning(
+            f"Non-admin attempted admin action: user={current_user.get('id')}, role={user_role}"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only recruiters and admins allowed",
         )
 
     if not current_user.get("company_id"):
+        logger.warning(
+            f"Admin without company attempted action: {current_user.get('id')}"
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User must be part of a company",
@@ -123,7 +164,7 @@ async def require_company_admin(
     return current_user
 
 
-# Job Service Dependencies
+# Service Dependencies
 
 
 async def get_job_service(db: AsyncSession = Depends(get_db)) -> JobService:

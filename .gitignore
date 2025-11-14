@@ -253,6 +253,10 @@ dist/
 # Cache directories
 .cache/
 cache/
+model_cache/
+*.safetensors
+.bin 
+.locks/
 
 # Temporary setup/test files
 test_setup.py

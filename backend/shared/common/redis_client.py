@@ -4,7 +4,11 @@ from typing import Optional
 import redis.asyncio as redis
 
 from common.config import BaseConfig
-from common.logger import logger
+
+from common.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 settings = BaseConfig()
 

@@ -1,4 +1,5 @@
-from common.logger import logger
+from common.logging import get_logger
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -12,6 +13,8 @@ from app.core.security import create_tokens, decode_token
 from app.schemas.token import Token
 from app.schemas.user import LoginRequest, UserCreate
 from app.services.auth_service import AuthService, get_auth_service
+
+logger = get_logger(__name__)
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])

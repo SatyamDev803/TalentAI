@@ -12,6 +12,7 @@ help:
 	@echo "  make auth-test     - Test auth service"
 	@echo "  make job-start    - Start job service"
 	@echo "  make job-test      - Test job service"
+	@echo "  make resume-parser-start    - Start resume parser service"
 	@echo "  make start         - Start all services"
 	@echo "  make test          - Run all tests"
 	@echo "  make stop          - Stop all services"
@@ -28,6 +29,12 @@ job-start:
 	@bash ./backend/scripts/services/job/start_job.sh
 
 job-test:
+
+resume-parser-start:
+	@echo "$(GREEN)Starting Resume Parser Service...$(NC)"
+	@bash ./backend/scripts/services/resume_parser/start_resume_parser.sh
+
+resume-parser-test:
 
 start:
 	@docker-compose up

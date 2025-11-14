@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple
 from uuid import uuid4, UUID
 
-from common.logger import logger
+from common.logging import get_logger
 from common.redis_client import redis_client
 from fastapi import Depends
 from sqlalchemy import select
@@ -19,6 +19,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserUpdate
+
+logger = get_logger(__name__)
 
 settings = AuthConfig()
 

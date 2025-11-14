@@ -3,13 +3,16 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from common.exceptions import ResourceNotFoundError, ValidationError
-from common.logger import logger
+from common.logging import get_logger
+
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application import Application, ApplicationStatus
 from app.models.job import Job
 from app.schemas.application import ApplicationCreate, ApplicationUpdate
+
+logger = get_logger(__name__)
 
 
 class ApplicationService:
