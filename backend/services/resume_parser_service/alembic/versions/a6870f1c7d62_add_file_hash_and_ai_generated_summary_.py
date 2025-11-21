@@ -1,7 +1,7 @@
 """Add file_hash and ai_generated_summary fields
 
 Revision ID: a6870f1c7d62
-Revises: ac6eb147ec44
+Revises:
 Create Date: 2025-11-10 16:17:43.890506
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision: str = "a6870f1c7d62"
-down_revision: Union[str, Sequence[str], None] = "ac6eb147ec44"
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
