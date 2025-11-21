@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -55,7 +54,7 @@ class Resume(Base):
 
     # ML Embeddings
     embedding: Mapped[Optional[list]] = mapped_column(
-        Vector(384),
+        JSON,
         nullable=True,
     )
     embedding_model: Mapped[Optional[str]] = mapped_column(
