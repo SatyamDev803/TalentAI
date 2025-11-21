@@ -42,6 +42,9 @@ class BaseConfig(BaseSettings):
     postgres_db_resume_parser: str = Field(
         default="talentai_resume", alias="POSTGRES_DB_RESUME_PARSER"
     )
+    postgres_db_matching: str = Field(
+        default="talentai_matching", alias="POSTGRES_DB_MATCHING"
+    )
 
     # MongoDB
     mongodb_host: str = Field(default="localhost", alias="MONGODB_HOST")
@@ -108,8 +111,7 @@ class BaseConfig(BaseSettings):
     )
     embedding_dimension: int = Field(default=384, alias="EMBEDDING_DIMENSION")
 
-    # Vector DBs
-    pgvector_enabled: bool = Field(default=True, alias="PGVECTOR_ENABLED")
+    # Vector DB - ChromaDB only (pgvector removed for performance)
     chroma_persist_dir: str = Field(default="./chroma_data", alias="CHROMA_PERSIST_DIR")
     chroma_collection_name: str = Field(
         default="resumes", alias="CHROMA_COLLECTION_NAME"
@@ -155,6 +157,12 @@ class BaseConfig(BaseSettings):
     ray_enabled: bool = Field(default=True, alias="RAY_ENABLED")
     ray_dashboard_port: int = Field(default=8265, alias="RAY_DASHBOARD_PORT")
     ray_num_cpus: int = Field(default=4, alias="RAY_NUM_CPUS")
+
+    weight_skill: float = Field(default=0.4, alias="WEIGHT_SKILL")
+    weight_experience: float = Field(default=0.3, alias="WEIGHT_EXPERIENCE")
+    weight_location: float = Field(default=0.15, alias="WEIGHT_LOCATION")
+    weight_salary: float = Field(default=0.15, alias="WEIGHT_SALARY")
+    max_llm_cost_per_day: float = Field(default=10.0, alias="MAX_LLM_COST_PER_DAY")
 
     # Tesseract
     tesseract_cmd: str = Field(
@@ -240,6 +248,13 @@ class BaseConfig(BaseSettings):
         return (
             f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db_resume_parser}"
+        )
+
+    @property
+    def database_url_matching(self) -> str:
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db_matching}"
         )
 
     @property
