@@ -37,6 +37,11 @@ class RedisClient:
             except Exception as e:
                 logger.error(f"Error closing Redis: {e}")
 
+    async def ping(self) -> bool:
+        if not self.client:
+            raise Exception("Redis client not initialized")
+        return await self.client.ping()
+
     async def health_check(self) -> bool:
         if not self.client:
             return False
