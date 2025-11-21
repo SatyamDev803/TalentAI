@@ -54,7 +54,6 @@ def upgrade() -> None:
         table_name="resumes",
         postgresql_where="(is_deleted = false)",
     )
-    # Note: embedding column type stays as is (Vector type removed from ORM, but database type unchanged for now)
 
 
 def downgrade() -> None:

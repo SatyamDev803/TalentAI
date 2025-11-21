@@ -19,19 +19,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """
-    Add performance indexes for common query patterns.
-
-    FIRST: Convert JSON columns to JSONB (required for GIN indexes)
-    THEN: Add performance indexes
-    """
-
-    print("🚀 Adding performance indexes...")
-
-    # ═══════════════════════════════════════════════════════════
-    # STEP 1: Convert JSON to JSONB (if needed)
-    # ═══════════════════════════════════════════════════════════
-    print("📦 Converting JSON columns to JSONB...")
 
     # Convert skills from JSON to JSONB
     op.execute("ALTER TABLE resumes ALTER COLUMN skills TYPE JSONB USING skills::jsonb")
@@ -50,12 +37,6 @@ def upgrade() -> None:
         "ALTER TABLE resumes ALTER COLUMN languages TYPE JSONB USING languages::jsonb"
     )
 
-    print("✅ Converted JSON → JSONB")
-
-    # ═══════════════════════════════════════════════════════════
-    # STEP 2: Add Performance Indexes
-    # ═══════════════════════════════════════════════════════════
-
     # 1. Composite index for user queries (most common pattern)
     op.create_index(
         "idx_resumes_user_not_deleted",
@@ -64,7 +45,6 @@ def upgrade() -> None:
         unique=False,
         postgresql_where=sa.text("is_deleted = false"),
     )
-    print("✅ Created: idx_resumes_user_not_deleted")
 
     # 2. Index for ready-to-search resumes
     op.create_index(
@@ -76,7 +56,6 @@ def upgrade() -> None:
             "is_deleted = false AND is_parsed = true AND is_embedding_generated = true"
         ),
     )
-    print("✅ Created: idx_resumes_searchable")
 
     # 3. GIN index for JSONB skill search (NOW WORKS!)
     op.execute(
@@ -85,7 +64,6 @@ def upgrade() -> None:
         ON resumes USING gin(skills jsonb_path_ops)
     """
     )
-    print("✅ Created: idx_resumes_skills_gin (GIN)")
 
     # 4. GIN index for experience search
     op.execute(
@@ -94,7 +72,6 @@ def upgrade() -> None:
         ON resumes USING gin(experience jsonb_path_ops)
     """
     )
-    print("✅ Created: idx_resumes_experience_gin (GIN)")
 
     # 5. Index for date-based queries
     op.create_index(
@@ -103,7 +80,6 @@ def upgrade() -> None:
         [sa.text("created_at DESC")],
         unique=False,
     )
-    print("✅ Created: idx_resumes_created_at_desc")
 
     # 6. Index for last parsed timestamp
     op.create_index(
@@ -113,7 +89,6 @@ def upgrade() -> None:
         unique=False,
         postgresql_where=sa.text("last_parsed_at IS NOT NULL"),
     )
-    print("✅ Created: idx_resumes_last_parsed")
 
     # 7. Composite index for pagination
     op.create_index(
@@ -122,7 +97,6 @@ def upgrade() -> None:
         ["user_id", sa.text("created_at DESC")],
         unique=False,
     )
-    print("✅ Created: idx_resumes_user_created")
 
     # 8. Full-text search index
     op.execute(
@@ -139,17 +113,10 @@ def upgrade() -> None:
         )
     """
     )
-    print("✅ Created: idx_resumes_fulltext")
-
-    print("\n🎉 Migration complete!")
-    print("   • Converted 5 columns: JSON → JSONB")
-    print("   • Created 8 performance indexes")
 
 
 def downgrade() -> None:
     """Remove performance indexes and revert JSONB to JSON."""
-
-    print("🔄 Rolling back...")
 
     # Drop indexes
     op.drop_index("idx_resumes_fulltext", table_name="resumes")
@@ -160,12 +127,3 @@ def downgrade() -> None:
     op.drop_index("idx_resumes_skills_gin", table_name="resumes")
     op.drop_index("idx_resumes_searchable", table_name="resumes")
     op.drop_index("idx_resumes_user_not_deleted", table_name="resumes")
-
-    # Revert JSONB to JSON (optional - JSONB is better, so you might want to keep it)
-    # op.execute("ALTER TABLE resumes ALTER COLUMN skills TYPE JSON USING skills::json")
-    # op.execute("ALTER TABLE resumes ALTER COLUMN experience TYPE JSON USING experience::json")
-    # op.execute("ALTER TABLE resumes ALTER COLUMN education TYPE JSON USING education::json")
-    # op.execute("ALTER TABLE resumes ALTER COLUMN certifications TYPE JSON USING certifications::json")
-    # op.execute("ALTER TABLE resumes ALTER COLUMN languages TYPE JSON USING languages::json")
-
-    print("✅ Rollback complete")

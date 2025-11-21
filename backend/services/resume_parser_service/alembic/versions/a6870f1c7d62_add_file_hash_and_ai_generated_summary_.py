@@ -33,7 +33,7 @@ def upgrade() -> None:
         "resumes", sa.Column("ai_generated_summary", sa.Text(), nullable=True)
     )
 
-    # Recreate HNSW index (was dropped by autogenerate)
+    # HNSW index
     op.execute(
         "CREATE INDEX IF NOT EXISTS resumes_embedding_hnsw_idx ON resumes "
         "USING hnsw (embedding vector_cosine_ops)"
