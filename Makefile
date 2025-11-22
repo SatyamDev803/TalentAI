@@ -13,6 +13,7 @@ help:
 	@echo "  make job-start    - Start job service"
 	@echo "  make job-test      - Test job service"
 	@echo "  make resume-parser-start    - Start resume parser service"
+	@echo "  make matching_engine-start    - Start matching engine service"
 	@echo "  make start         - Start all services"
 	@echo "  make test          - Run all tests"
 	@echo "  make stop          - Stop all services"
@@ -35,6 +36,14 @@ resume-parser-start:
 	@bash ./backend/scripts/services/resume_parser/start_resume_parser.sh
 
 resume-parser-test:
+
+matching-engine-start:
+	@echo "$(GREEN)Starting Matching Engine Service...$(NC)"
+	@bash ./backend/scripts/services/matching_engine/start_matching_engine.sh
+
+
+matching-engine-test:
+
 
 start:
 	@docker-compose up
