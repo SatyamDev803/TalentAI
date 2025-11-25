@@ -20,11 +20,12 @@ def decode_access_token(token: str) -> Optional[dict]:
         return payload
 
     except ExpiredSignatureError:
-        logger.debug("Token expired")
+        logger.info("Token expired for user (normal expiration)")
         return None
     except InvalidTokenError as e:
-        logger.debug(f"Invalid token: {e}")
+        logger.info(f"Invalid token structure: {str(e)[:50]}")
         return None
+
     except PyJWTError as e:
         logger.warning(f"JWT error: {e}")
         return None
