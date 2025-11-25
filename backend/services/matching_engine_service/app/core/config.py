@@ -19,10 +19,6 @@ class Settings(BaseConfig):
     )
     embedding_dimension: int = Field(default=384, env="EMBEDDING_DIMENSION")
 
-    # Vector Sync Settings
-    # enable_vector_sync: bool = Field(default=True, env="ENABLE_VECTOR_SYNC")
-    # sync_batch_size: int = Field(default=100, env="SYNC_BATCH_SIZE")
-
     @property
     def SERVICE_NAME(self) -> str:
         return "matching-engine-service"
@@ -63,5 +59,4 @@ class Settings(BaseConfig):
         }
 
 
-# Singleton instance
 settings = Settings()
