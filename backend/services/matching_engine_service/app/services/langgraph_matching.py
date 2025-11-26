@@ -1,23 +1,12 @@
 import re
-from typing import Dict, Any, TypedDict, List
+from typing import Dict, Any
 from langgraph.graph import StateGraph, END
 
 
+from app.schemas.matching import MatchingState
 from common.logging import get_logger
 
 logger = get_logger(__name__)
-
-
-class MatchingState(TypedDict):
-
-    job_data: Dict[str, Any]
-    candidate_data: Dict[str, Any]
-    initial_scores: Dict[str, float]
-    vector_similarity: float
-    skill_analysis: Dict[str, Any]
-    experience_analysis: Dict[str, Any]
-    final_recommendation: Dict[str, Any]
-    reasoning_steps: List[str]
 
 
 class LangGraphMatchingWorkflow:
