@@ -1,12 +1,6 @@
-"""
-Skill Gap Analysis Chain
-Using google-generativeai library
-"""
-
-from typing import Dict, Any, List
+from typing import Dict, Any
 import json
 import google.generativeai as genai
-from pydantic import BaseModel, Field
 
 from app.core.cache import cache_service
 from common.logging import get_logger
