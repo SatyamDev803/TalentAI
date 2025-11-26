@@ -300,7 +300,5 @@ backend/services/workflow_service/
 
 
 
-/backend/services/matching_engine_service/scripts
 /backend/services/matching_engine_service/chroma_data
 /backend/services/matching_engine_service/tests
-/backend/services/matching_engine_service/test_langchain.json
