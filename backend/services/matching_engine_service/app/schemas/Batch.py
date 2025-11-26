@@ -1,13 +1,15 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
 class BatchMatchRequest(BaseModel):
 
-    job_id: str = Field(..., description="Job ID to match against")
-    candidate_ids: List[str] = Field(
+    job_data: Dict[str, Any] = Field(
+        ..., description="Job data including skills, location, etc."
+    )
+    candidates_data: List[Dict[str, Any]] = Field(
         ...,
-        description="List of candidate IDs (1-100 candidates)",
+        description="List of candidate data (1-100 candidates)",
         min_length=1,
         max_length=100,
     )
@@ -16,9 +18,6 @@ class BatchMatchRequest(BaseModel):
     )
     min_score_threshold: Optional[float] = Field(
         default=None, description="Minimum score threshold (0-100)", ge=0, le=100
-    )
-    store_results: bool = Field(
-        default=False, description="Store top 10 results in database"
     )
 
 
