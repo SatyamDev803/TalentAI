@@ -29,7 +29,7 @@ class RayManager:
                     ),
                     ignore_reinit_error=True,
                     logging_level="INFO",
-                    log_to_driver=False,  # Silence warnings
+                    log_to_driver=False,
                     _system_config={
                         "scheduler_report_heartbeat_interval_ms": 0,
                         "scheduler_report_events": False,
