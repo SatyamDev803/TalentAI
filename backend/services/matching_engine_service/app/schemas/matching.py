@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, TypedDict
 from uuid import UUID
 from datetime import datetime
 
@@ -69,7 +69,13 @@ class MatchResponse(BaseModel):
     created_at: datetime
 
 
-class BatchMatchResponse(BaseModel):
-    matches: List[MatchResponse]
-    total_matches: int
-    processing_time_ms: float
+class MatchingState(TypedDict):
+
+    job_data: Dict[str, Any]
+    candidate_data: Dict[str, Any]
+    initial_scores: Dict[str, float]
+    vector_similarity: float
+    skill_analysis: Dict[str, Any]
+    experience_analysis: Dict[str, Any]
+    final_recommendation: Dict[str, Any]
+    reasoning_steps: List[str]
