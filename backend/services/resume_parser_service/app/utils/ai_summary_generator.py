@@ -1,5 +1,5 @@
 from typing import Optional
-from google import genai
+import google.generativeai as genai
 from openai import OpenAI
 
 
@@ -9,20 +9,8 @@ from app.core.config import settings
 logger = get_logger(__name__)
 
 # Check available providers
-HAS_GEMINI = False
-HAS_OPENAI = False
-
-try:
-    HAS_GEMINI = True
-    logger.info("Google Gemini available")
-except ImportError:
-    logger.warning("google-genai not installed. Gemini will be disabled.")
-
-try:
-    HAS_OPENAI = True
-    logger.info("OpenAI available")
-except ImportError:
-    logger.warning("OpenAI not installed. OpenAI will be disabled.")
+HAS_GEMINI = True
+HAS_OPENAI = True
 
 
 def generate_with_gemini(context: str) -> Optional[str]:
@@ -35,7 +23,8 @@ def generate_with_gemini(context: str) -> Optional[str]:
         return None
 
     try:
-        client = genai.Client(api_key=settings.google_api_key)
+        genai.configure(api_key=settings.google_api_key)
+        model = genai.GenerativeModel(settings.gemini_model)
 
         # Create prompt
         prompt = f"""Generate a professional 2-3 sentence summary for this candidate's resume.
@@ -47,10 +36,7 @@ Resume Information:
 
 Professional Summary:"""
 
-        response = client.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-        )
+        response = model.generate_content(prompt)
 
         summary = response.text.strip()
 

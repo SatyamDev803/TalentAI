@@ -25,8 +25,7 @@ class ResumeParserConfig(BaseConfig):
     )
     embedding_dimension: int = Field(default=384, alias="EMBEDDING_DIMENSION")
 
-    # Vector DBs
-    pgvector_enabled: bool = Field(default=True, alias="PGVECTOR_ENABLED")
+    # Vector DB - ChromaDB only (pgvector removed for performance)
     chroma_persist_dir: str = Field(default="./chroma_data", alias="CHROMA_PERSIST_DIR")
     chroma_collection_name: str = Field(
         default="resumes", alias="CHROMA_COLLECTION_NAME"

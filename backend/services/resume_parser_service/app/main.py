@@ -123,7 +123,7 @@ async def health_check():
         "database": {
             "status": db_status,
             "type": "PostgreSQL",
-            "pgvector_enabled": settings.pgvector_enabled,
+            "vector_db": "ChromaDB",
         },
         "websocket": {
             "enabled": True,

@@ -163,7 +163,7 @@ en_core_web_sm/
 nlp_models/
 
 # Frontend Specific
-
+frontend/
 # Dependencies
 frontend/node_modules/
 frontend/yarn.lock
@@ -295,6 +295,10 @@ env
 # Future phases (not implemented yet)
 backend/services/ai_interview_service/
 backend/services/analytics_service/
-backend/services/matching_engine_service/
 backend/services/notification_service/
 backend/services/workflow_service/
+
+
+
+/backend/services/matching_engine_service/chroma_data
+/backend/services/matching_engine_service/tests
